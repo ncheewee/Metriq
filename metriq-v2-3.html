@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0c0c0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MetrIQ">
+  <title>MetrIQ — Smart Meter Reader</title>
+  <link rel="manifest" href="data:application/json,{%22name%22:%22MetrIQ%20Smart%20Meter%20Reader%22,%22short_name%22:%22MetrIQ%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230c0c0f%22,%22theme_color%22:%22%230c0c0f%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%253Csvg%2520xmlns%253D'http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg'%2520viewBox%253D'0%25200%2520192%2520192'%253E%253Crect%2520width%253D'192'%2520height%253D'192'%2520rx%253D'32'%2520fill%253D'%25230c0c0f'%252F%253E%253Ctext%2520x%253D'96'%2520y%253D'130'%2520font-size%253D'120'%2520text-anchor%253D'middle'%253E%25E2%259A%25A1%253C%252Ftext%253E%253C%252Fsvg%253E%22,%22sizes%22:%22192x192%22,%22type%22:%22image%2Fsvg+xml%22}]}">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:#0c0c0f; --surface:#141418; --surface2:#1c1c22;
+      --border:#2a2a38; --border2:#3a3a4a;
+      --amber:#f59e0b; --amber-glow:rgba(245,158,11,.15);
+      --green:#10b981; --green-dim:rgba(16,185,129,.15);
+      --red:#ef4444; --red-dim:rgba(239,68,68,.15);
+      --text:#e0e0ea; --text2:#8888a0; --text3:#555568;
+      --num:#fbbf24; --r:12px; --r-sm:8px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow:hidden}
+
+    /* ── LAYOUT ── */
+    #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+    #header{padding:14px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+    .logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:22px;letter-spacing:2px;color:var(--amber);display:flex;align-items:center;gap:8px}
+    .logo span{color:var(--text2);font-weight:300;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+    .meter-badge{font-family:'Share Tech Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text2)}
+    #screens{flex:1;overflow:hidden;position:relative}
+    .screen{position:absolute;inset:0;overflow-y:auto;padding:16px 20px 20px;display:none;flex-direction:column;gap:14px}
+    .screen.active{display:flex}
+    #nav{display:flex;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+    .nav-btn{flex:1;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text3);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:color .2s}
+    .nav-btn .ni{font-size:19px;transition:transform .2s}
+    .nav-btn.active{color:var(--amber)}
+    .nav-btn.active .ni{transform:scale(1.1)}
+    .nav-btn:active{opacity:.7}
+
+    /* ── CARDS ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+    .card-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+
+    /* ── METER CHIPS ── */
+    .meter-selector{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;align-items:center}
+    .meter-selector::-webkit-scrollbar{display:none}
+    .meter-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:6px 14px;height:32px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;white-space:nowrap;line-height:1}
+    .meter-chip.active{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
+    .add-meter-chip{flex-shrink:0;display:inline-flex;align-items:center;height:32px;padding:6px 14px;border-radius:16px;border:1px dashed var(--border2);background:none;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;white-space:nowrap;line-height:1}
+
+    /* ── DASHBOARD ── */
+    .dash-reading{font-family:'Share Tech Mono',monospace;font-size:40px;color:var(--num);letter-spacing:3px;line-height:1}
+    .dash-unit{font-family:'Rajdhani',sans-serif;font-size:14px;color:var(--text2);margin-top:4px}
+    .dash-date{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3);margin-top:5px}
+    .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px}
+    .stat-value{font-family:'Share Tech Mono',monospace;font-size:22px;color:var(--num);margin:4px 0}
+    .stat-label{font-size:12px;color:var(--text2)}
+    .stat-trend{font-size:11px;margin-top:3px}
+    .trend-up{color:var(--red)}
+    .trend-dn{color:var(--green)}
+    .chart-wrap{position:relative;height:160px}
+    .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text3)}
+    .capture-fab{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--amber);color:#000;border:none;border-radius:var(--r);padding:15px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;width:100%;transition:opacity .15s,transform .1s}
+    .capture-fab:active{opacity:.85;transform:scale(.98)}
+
+    /* ── CAPTURE ── */
+    .step-bar{display:flex;align-items:center;gap:0;margin-bottom:6px}
+    .step-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:all .3s}
+    .step-dot.done{background:var(--amber)}
+    .step-dot.cur{background:var(--amber);box-shadow:0 0 8px var(--amber);width:24px;border-radius:4px}
+    .step-line{flex:1;height:1px;background:var(--border)}
+    .step-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:600}
+    .step-sub{font-size:13px;color:var(--text2);margin-top:3px}
+
+    .photo-area{border:2px dashed var(--border2);border-radius:var(--r);min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden}
+    .photo-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+    .photo-icon{font-size:38px;opacity:.45}
+    .photo-hint{font-size:13px;color:var(--text2);text-align:center}
+    .photo-hint strong{color:var(--amber)}
+    .photo-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .photo-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface2);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+    .photo-btn:active{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
+
+    .ext-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px}
+    .ext-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .ext-icon{font-size:18px}
+    .ext-lbl{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+    .ext-num{font-family:'Share Tech Mono',monospace;font-size:34px;color:var(--num);letter-spacing:4px}
+    .ext-conf{font-size:12px;margin-top:4px}
+    .conf-hi{color:var(--green)} .conf-md{color:var(--amber)} .conf-lo{color:var(--red)}
+    .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .pulse{animation:pulse 1.6s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* ── FORMS ── */
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)}
+    .form-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:16px;outline:none;transition:border-color .2s;width:100%}
+    .form-input:focus{border-color:var(--amber)}
+    .form-txt{font-family:'Barlow',sans-serif;font-size:15px}
+    select.form-input{cursor:pointer}
+    select.form-input option{background:var(--surface2)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-hint{font-size:12px;color:var(--text3)}
+
+    .btn{padding:12px 18px;border-radius:var(--r-sm);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;letter-spacing:1px;cursor:pointer;border:none;transition:all .15s}
+    .btn:active{transform:scale(.97)}
+    .btn-primary{background:var(--amber);color:#000}
+    .btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+    .btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+    .btn-row{display:flex;gap:10px}
+    .btn-row .btn{flex:1}
+    .btn-full{width:100%}
+
+    /* ── HISTORY ── */
+    .hi-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px 15px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:border-color .2s}
+    .hi-item:active{border-color:var(--border2)}
+    .hi-ico{font-size:22px;width:38px;height:38px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .hi-body{flex:1;min-width:0}
+    .hi-name{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;color:var(--text2)}
+    .hi-reading{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--num)}
+    .hi-date{font-size:11px;color:var(--text3);margin-top:2px}
+    .hi-cons{text-align:right;flex-shrink:0}
+    .hi-cons-val{font-family:'Share Tech Mono',monospace;font-size:15px}
+    .hi-cons-lbl{font-size:10px;color:var(--text3);margin-top:1px}
+    .c-pos{color:var(--amber)} .c-neg{color:var(--red)}
+    .empty{text-align:center;padding:40px 20px;color:var(--text3)}
+    .empty-ico{font-size:44px;margin-bottom:10px;opacity:.45}
+    .empty-title{font-family:'Rajdhani',sans-serif;font-size:17px;color:var(--text2)}
+    .empty-sub{font-size:13px;margin-top:5px}
+
+    /* ── ANALYTICS ── */
+    .period-row{display:flex;gap:6px}
+    .period-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer}
+    .period-btn.active{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
+    .ins-row{display:flex;flex-direction:column}
+    .ins-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+    .ins-item:last-child{border-bottom:none}
+    .ins-lbl{font-size:14px;color:var(--text2)}
+    .ins-val{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--text)}
+
+    /* ── SETTINGS ── */
+    .set-item{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+    .set-item:last-child{border-bottom:none}
+    .set-lbl{font-size:15px}
+    .set-sub{font-size:12px;color:var(--text3);margin-top:2px}
+
+    /* ── MODALS ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-end;z-index:100;backdrop-filter:blur(4px)}
+    .overlay.open{display:flex}
+    .modal{background:var(--surface);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:22px 20px 36px;width:100%;max-width:480px;margin:0 auto;animation:slideUp .25s ease;max-height:82vh;overflow-y:auto}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+    .modal-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:600;margin-bottom:14px}
+
+    /* ── DETAIL ── */
+    .det-reading{font-family:'Share Tech Mono',monospace;font-size:46px;color:var(--num);letter-spacing:4px;text-align:center;padding:18px 0}
+    .det-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .det-item{background:var(--surface2);border-radius:var(--r-sm);padding:11px}
+    .det-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+    .det-val{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:500}
+    .photo-thumb{width:100%;border-radius:var(--r-sm);max-height:190px;object-fit:cover}
+    .tag{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+    .tag-green{background:var(--green-dim);color:var(--green)}
+    .tag-amber{background:var(--amber-glow);color:var(--amber)}
+    .tag-red{background:var(--red-dim);color:var(--red)}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-70px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 18px;font-size:14px;z-index:200;transition:transform .28s ease;white-space:nowrap;max-width:88vw;text-align:center}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+    #toast.ok{border-color:var(--green);color:var(--green)}
+    #toast.err{border-color:var(--red);color:var(--red)}
+
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+    .w-full{width:100%}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="logo">⚡ MetrIQ <span>Smart Reader</span></div>
+    <div class="meter-badge" id="activeBadge">— —</div>
+  </div>
+
+  <!-- SCREENS -->
+  <div id="screens">
+
+    <!-- DASHBOARD -->
+    <div class="screen active" id="screen-dash">
+      <div class="meter-selector" id="meterSel"></div>
+
+      <div class="card">
+        <div class="card-label">Latest Reading</div>
+        <div class="dash-reading" id="dReading">— — —</div>
+        <div class="dash-unit" id="dUnit">No readings yet</div>
+        <div class="dash-date" id="dDate"></div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="card-label">This Month</div>
+          <div class="stat-value" id="sMonth">—</div>
+          <div class="stat-label" id="sMonthU">units</div>
+          <div class="stat-trend" id="sMonthT"></div>
+        </div>
+        <div class="stat-card">
+          <div class="card-label">Daily Avg</div>
+          <div class="stat-value" id="sDaily">—</div>
+          <div class="stat-label" id="sDailyU">units/day</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-hdr">
+          <div class="section-title">30-Day Consumption</div>
+          <div id="readingCount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)"></div>
+        </div>
+        <div class="chart-wrap"><canvas id="miniChart"></canvas></div>
+      </div>
+
+      <button class="capture-fab" onclick="startCapture()">
+        <span style="font-size:20px">📷</span> CAPTURE READING
+      </button>
+    </div>
+
+    <!-- CAPTURE -->
+    <div class="screen" id="screen-capture">
+      <div>
+        <div class="step-bar" id="stepBar"></div>
+        <div style="height:6px"></div>
+        <div class="step-title" id="stepTitle">—</div>
+        <div class="step-sub" id="stepSub">—</div>
+      </div>
+      <div id="captureContent"></div>
+      <div class="btn-row" id="captureNav">
+        <button class="btn btn-ghost" id="btnBack" onclick="capBack()">Back</button>
+        <button class="btn btn-primary" id="btnNext" onclick="capNext()">Continue</button>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="screen" id="screen-history">
+      <div class="section-hdr">
+        <div class="section-title">Reading Log</div>
+        <select class="form-input form-txt" id="histFilter" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderHistory()">
+          <option value="all">All Meters</option>
+        </select>
+      </div>
+      <div id="histList"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="screen" id="screen-analytics">
+      <div class="section-hdr">
+        <div class="section-title">Analytics</div>
+        <div class="period-row">
+          <button class="period-btn active" data-p="7"  onclick="setPeriod(7)">7D</button>
+          <button class="period-btn"        data-p="30" onclick="setPeriod(30)">30D</button>
+          <button class="period-btn"        data-p="90" onclick="setPeriod(90)">90D</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Consumption Trend</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Insights</div>
+        <div class="ins-row" id="insightRows"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Monthly Summary</div>
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="screen-settings">
+      <!-- AI Provider -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:12px">AI Provider</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <div class="form-label">Provider</div>
+          <select class="form-input" id="aiProvider" onchange="onProviderChange()">
+            <option value="groq">⚡ Groq — Llama 4 Vision (Free, Fast)</option>
+            <option value="openrouter">🔀 OpenRouter — Llama 3.2 Vision (Free)</option>
+            <option value="gemini">🔵 Google Gemini Flash (Free, rate limited)</option>
+            <option value="claude">🟠 Anthropic Claude (Paid)</option>
+            <option value="none">✏️ None — Manual entry only</option>
+          </select>
+        </div>
+        <!-- Groq -->
+        <div id="grpGroq" class="form-group" style="margin-bottom:12px">
+          <div class="form-label">Groq API Key</div>
+          <input class="form-input form-txt" type="password" id="groqKey" placeholder="gsk_…" autocomplete="off">
+          <div class="form-hint" style="margin-top:5px">100% Free at <strong style="color:var(--amber)">console.groq.com</strong> → API Keys → Create key. No credit card.</div>
+        </div>
+        <!-- OpenRouter -->
+        <div id="grpOpenrouter" class="form-group" style="display:none;margin-bottom:12px">
+          <div class="form-label">OpenRouter API Key</div>
+          <input class="form-input form-txt" type="password" id="openrouterKey" placeholder="sk-or-…" autocomplete="off">
+          <div class="form-hint" style="margin-top:5px">Free models available at <strong style="color:var(--amber)">openrouter.ai</strong> → Keys → Create key.</div>
+        </div>
+        <!-- Gemini -->
+        <div id="grpGemini" class="form-group" style="display:none;margin-bottom:12px">
+          <div class="form-label">Gemini API Key</div>
+          <input class="form-input form-txt" type="password" id="geminiKey" placeholder="AIza…" autocomplete="off">
+          <div class="form-hint" style="margin-top:5px">Free at <strong style="color:var(--amber)">aistudio.google.com</strong> → Get API key. Rate limited: 15 req/min.</div>
+        </div>
+        <!-- Claude -->
+        <div id="grpClaude" class="form-group" style="display:none;margin-bottom:12px">
+          <div class="form-label">Anthropic API Key</div>
+          <input class="form-input form-txt" type="password" id="claudeKey" placeholder="sk-ant-…" autocomplete="off">
+          <div class="form-hint" style="margin-top:5px">Paid — get yours at console.anthropic.com</div>
+        </div>
+        <button class="btn btn-primary w-full" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <!-- Meters -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:4px">Your Meters</div>
+        <div id="meterSettingsList"></div>
+        <div style="height:10px"></div>
+        <button class="btn btn-ghost w-full" onclick="openAddMeter()">+ Add Meter</button>
+      </div>
+
+      <!-- Data -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:4px">Data</div>
+        <div class="set-item">
+          <div><div class="set-lbl">Export All Data</div><div class="set-sub">Download readings as JSON</div></div>
+          <button class="btn btn-ghost" style="padding:7px 13px;font-size:13px" onclick="exportData()">Export</button>
+        </div>
+        <div class="set-item">
+          <div><div class="set-lbl">Clear All Readings</div><div class="set-sub">Cannot be undone</div></div>
+          <button class="btn btn-danger" style="padding:7px 13px;font-size:13px" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">
+        MetrIQ v2 · Smart Meter Reader<br>
+        <span style="color:var(--amber)">Groq · Llama · Gemini · Claude Vision AI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <button class="nav-btn active" data-s="dash"      onclick="goScreen('dash')">     <span class="ni">🏠</span>Home</button>
+    <button class="nav-btn"        data-s="capture"   onclick="startCapture()">       <span class="ni">📷</span>Capture</button>
+    <button class="nav-btn"        data-s="history"   onclick="goScreen('history')">  <span class="ni">📋</span>History</button>
+    <button class="nav-btn"        data-s="analytics" onclick="goScreen('analytics')"><span class="ni">📊</span>Analytics</button>
+    <button class="nav-btn"        data-s="settings"  onclick="goScreen('settings')"> <span class="ni">⚙️</span>Settings</button>
+  </nav>
+</div>
+
+<!-- ADD METER MODAL -->
+<div class="overlay" id="modalMeter">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Meter</div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div class="form-group">
+        <div class="form-label">Meter Name</div>
+        <input class="form-input form-txt" id="nmName" placeholder="e.g. Home Electricity" maxlength="30">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Type</div>
+        <select class="form-input" id="nmType" onchange="onMeterTypeChange()">
+          <option value="electricity">⚡ Electricity (kWh)</option>
+          <option value="water">💧 Water (m³)</option>
+          <option value="gas">🔥 Gas (m³)</option>
+          <option value="custom">🔢 Custom</option>
+        </select>
+      </div>
+      <div class="form-group" id="nmCustomGrp" style="display:none">
+        <div class="form-label">Unit</div>
+        <input class="form-input" id="nmUnit" placeholder="e.g. litres" maxlength="20">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeModal('modalMeter')">Cancel</button>
+        <button class="btn btn-primary" onclick="addMeter()">Add Meter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME METER MODAL -->
+<div class="overlay" id="modalRename">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Rename Meter</div>
+    <input type="hidden" id="renameMeterId">
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div class="form-group">
+        <div class="form-label">New Name</div>
+        <input class="form-input form-txt" id="renameInput" maxlength="30" placeholder="e.g. Master Bedroom AC">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeModal('modalRename')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmRename()">Rename</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="overlay" id="modalDetail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════
+const Store = {
+  async get(k) {
+    if (window.storage) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch {} }
+    try { const v = localStorage.getItem('mq2_'+k); return v ? JSON.parse(v) : null; } catch { return null; }
+  },
+  async set(k, v) {
+    const s = JSON.stringify(v);
+    if (window.storage) { try { await window.storage.set(k, s); } catch {} }
+    try { localStorage.setItem('mq2_'+k, s); } catch {}
+  }
+};
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let S = {
+  meters: [],    // {id, name, type, unit}
+  readings: [],  // {id, meterId, reading, date, time, notes, photoData, aiConf}
+  activeMeter: null,
+  aiProvider: 'groq',
+  geminiKey: '',
+  claudeKey: '',
+  groqKey: '',
+  openrouterKey: '',
+};
+
+let cap = { step:0, meterId:null, photoData:null, extracted:null, aiConf:null, aiNotes:null, confirmed:null };
+let charts = { mini:null, trend:null, bar:null };
+let analyticsPeriod = 7;
+
+const METER_TYPES = {
+  electricity: { icon:'⚡', unit:'kWh' },
+  water:       { icon:'💧', unit:'m³'  },
+  gas:         { icon:'🔥', unit:'m³'  },
+  custom:      { icon:'🔢', unit:'units'},
+};
+const STEPS = [
+  { title:'Select Meter',     sub:'Which meter are you reading?' },
+  { title:'Add Photo',        sub:'Use camera or choose from your gallery' },
+  { title:'Confirm Reading',  sub:'Review — edit if AI got it wrong' },
+  { title:'Record Details',   sub:'Date, time and optional notes' },
+];
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+async function init() {
+  const [meters, readings, aiProvider, geminiKey, claudeKey, groqKey, openrouterKey] = await Promise.all([
+    Store.get('meters'), Store.get('readings'),
+    Store.get('aiProvider'), Store.get('geminiKey'), Store.get('claudeKey'),
+    Store.get('groqKey'), Store.get('openrouterKey')
+  ]);
+  if (meters)        S.meters        = meters;
+  if (readings)      S.readings      = readings;
+  if (aiProvider)    S.aiProvider    = aiProvider;
+  if (geminiKey)     S.geminiKey     = geminiKey;
+  if (claudeKey)     S.claudeKey     = claudeKey;
+  if (groqKey)       S.groqKey       = groqKey;
+  if (openrouterKey) S.openrouterKey = openrouterKey;
+  if (S.meters.length) S.activeMeter = S.meters[0].id;
+
+  document.getElementById('aiProvider').value      = S.aiProvider;
+  document.getElementById('geminiKey').value       = S.geminiKey;
+  document.getElementById('claudeKey').value       = S.claudeKey;
+  document.getElementById('groqKey').value         = S.groqKey;
+  document.getElementById('openrouterKey').value   = S.openrouterKey;
+  onProviderChange();
+
+  document.getElementById('nmType').addEventListener('change', onMeterTypeChange);
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) closeModal(o.id); }));
+
+  renderMeterSelector();
+  renderDashboard();
+  renderHistory();
+  renderMeterSettings();
+  initMiniChart();
+  renderAnalytics();
+}
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelector(`.nav-btn[data-s="${id}"]`)?.classList.add('active');
+  if (id==='analytics') setTimeout(renderAnalytics, 40);
+  if (id==='history')   renderHistory();
+  if (id==='settings')  renderMeterSettings();
+}
+
+// ═══════════════════════════════════════════
+//  METERS
+// ═══════════════════════════════════════════
+function mInfo(m) {
+  const t = METER_TYPES[m.type] || METER_TYPES.custom;
+  return { icon: t.icon, unit: m.unit || t.unit };
+}
+
+function renderMeterSelector() {
+  const sel = document.getElementById('meterSel');
+  sel.innerHTML = S.meters.map(m => {
+    const { icon, unit } = mInfo(m);
+    const cls = m.id === S.activeMeter ? ' active' : '';
+    return `<button class="meter-chip${cls}" onclick="setActiveMeter('${m.id}')">${icon} ${m.name}</button>`;
+  }).join('') + `<button class="add-meter-chip" onclick="openAddMeter()">+ Add</button>`;
+
+  const am = S.meters.find(m => m.id === S.activeMeter);
+  document.getElementById('activeBadge').textContent = am ? mInfo(am).unit : '— —';
+
+  // History filter
+  const hf = document.getElementById('histFilter');
+  const prev = hf.value;
+  hf.innerHTML = '<option value="all">All Meters</option>' +
+    S.meters.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  hf.value = prev;
+}
+
+function setActiveMeter(id) {
+  S.activeMeter = id;
+  renderMeterSelector();
+  renderDashboard();
+}
+
+function openAddMeter() { openModal('modalMeter'); }
+function onMeterTypeChange() {
+  const v = document.getElementById('nmType').value;
+  document.getElementById('nmCustomGrp').style.display = v==='custom' ? 'flex' : 'none';
+}
+
+function addMeter() {
+  const name = document.getElementById('nmName').value.trim();
+  const type = document.getElementById('nmType').value;
+  const unit = type==='custom' ? (document.getElementById('nmUnit').value.trim()||'units') : METER_TYPES[type].unit;
+  if (!name) { toast('Enter a meter name','err'); return; }
+  const m = { id:'m_'+Date.now(), name, type, unit };
+  S.meters.push(m);
+  S.activeMeter = m.id;
+  Store.set('meters', S.meters);
+  document.getElementById('nmName').value = '';
+  closeModal('modalMeter');
+  renderMeterSelector();
+  renderDashboard();
+  renderMeterSettings();
+  toast('✓ Meter added');
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const meter = S.meters.find(m => m.id === S.activeMeter);
+  if (!meter) {
+    document.getElementById('dReading').textContent = '— — —';
+    document.getElementById('dUnit').textContent = 'Add a meter to start';
+    document.getElementById('dDate').textContent = '';
+    document.getElementById('sMonth').textContent = '—';
+    document.getElementById('sDaily').textContent = '—';
+    document.getElementById('readingCount').textContent = '';
+    updateMiniChart([]);
+    return;
+  }
+  const { icon, unit } = mInfo(meter);
+  const readings = S.readings.filter(r => r.meterId===meter.id)
+    .sort((a,b) => new Date(b.date+'T'+b.time) - new Date(a.date+'T'+a.time));
+
+  document.getElementById('readingCount').textContent = readings.length + ' readings';
+  document.getElementById('sMonthU').textContent = unit;
+  document.getElementById('sDailyU').textContent = unit+'/day';
+
+  if (!readings.length) {
+    document.getElementById('dReading').textContent = '— — —';
+    document.getElementById('dUnit').textContent = `No readings for ${meter.name}`;
+    document.getElementById('dDate').textContent = '';
+    document.getElementById('sMonth').textContent = '—';
+    document.getElementById('sDaily').textContent = '—';
+    updateMiniChart([]);
+    return;
+  }
+
+  const last = readings[0];
+  document.getElementById('dReading').textContent = fmtNum(last.reading);
+  document.getElementById('dUnit').textContent    = unit + ' · ' + meter.name;
+  document.getElementById('dDate').textContent    = fmtDate(last.date) + '  ' + last.time;
+
+  const now = new Date(), ms = new Date(now.getFullYear(), now.getMonth(), 1);
+  const mrd = readings.filter(r => new Date(r.date) >= ms).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if (mrd.length >= 2) {
+    const cons = parseFloat(mrd[mrd.length-1].reading) - parseFloat(mrd[0].reading);
+    const days = Math.max(1,(new Date(mrd[mrd.length-1].date)-new Date(mrd[0].date))/86400000);
+    document.getElementById('sMonth').textContent = cons.toFixed(1);
+    document.getElementById('sDaily').textContent = (cons/days).toFixed(2);
+  } else {
+    document.getElementById('sMonth').textContent = '—';
+    document.getElementById('sDaily').textContent = '—';
+  }
+
+  const sorted = [...readings].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const pts = [];
+  for (let i=1;i<sorted.length;i++) {
+    const days = Math.max(1,(new Date(sorted[i].date)-new Date(sorted[i-1].date))/86400000);
+    pts.push({ date:sorted[i].date, v:(parseFloat(sorted[i].reading)-parseFloat(sorted[i-1].reading))/days });
+  }
+  updateMiniChart(pts.slice(-15));
+}
+
+function fmtNum(r) {
+  const n = parseFloat(r);
+  return isNaN(n) ? r : n.toLocaleString('en-SG',{minimumFractionDigits:1,maximumFractionDigits:1});
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d+'T12:00').toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'2-digit'});
+}
+
+// ═══════════════════════════════════════════
+//  CAPTURE FLOW
+// ═══════════════════════════════════════════
+function startCapture() {
+  if (!S.meters.length) { toast('Add a meter first','err'); openAddMeter(); return; }
+  cap = { step:0, meterId:S.activeMeter||S.meters[0].id, photoData:null, extracted:null, aiConf:null, aiNotes:null, confirmed:null };
+  if (S.meters.length===1) cap.step = 1;
+  renderCapStep();
+  goScreen('capture');
+}
+
+function renderCapStep() {
+  const s = cap.step;
+  document.getElementById('stepTitle').textContent = STEPS[s].title;
+  document.getElementById('stepSub').textContent   = STEPS[s].sub;
+
+  // Step bar
+  let bar = '';
+  STEPS.forEach((_,i) => {
+    if (i>0) bar += '<div class="step-line"></div>';
+    bar += `<div class="step-dot ${i<s?'done':i===s?'cur':''}"></div>`;
+  });
+  document.getElementById('stepBar').innerHTML = bar;
+
+  document.getElementById('btnBack').style.display = s===0?'none':'';
+  document.getElementById('btnNext').textContent = s===STEPS.length-1 ? 'Save Reading' : 'Continue';
+  document.getElementById('btnNext').disabled = false;
+
+  const c = document.getElementById('captureContent');
+
+  if (s===0) {
+    // Meter select
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+      ${S.meters.map(m => {
+        const {icon,unit} = mInfo(m);
+        const sel = cap.meterId===m.id ? 'border-color:var(--amber);background:var(--amber-glow)' : '';
+        return `<div class="card" style="cursor:pointer;${sel}" onclick="selCapMeter('${m.id}')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:26px">${icon}</span>
+            <div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600">${m.name}</div>
+              <div style="font-size:13px;color:var(--text2)">${unit} · ${m.type}</div>
+            </div>
+            ${cap.meterId===m.id ? '<span style="margin-left:auto;color:var(--amber);font-size:18px">✓</span>' : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  } else if (s===1) {
+    // Photo
+    const hasPhoto = !!cap.photoData;
+    c.innerHTML = `
+      <div class="photo-area">
+        ${hasPhoto
+          ? `<img src="${cap.photoData}"><div class="photo-overlay"><span style="font-size:26px;opacity:.9">✅</span><span style="color:#fff;font-size:13px">Photo added</span></div>`
+          : `<div class="photo-icon">📸</div><div class="photo-hint">Add a photo of your <strong>meter display</strong></div>`}
+      </div>
+      <div class="photo-btns">
+        <button class="photo-btn" onclick="trigCam()"><span>📷</span> Camera</button>
+        <button class="photo-btn" onclick="trigGal()"><span>🖼️</span> Gallery</button>
+      </div>
+      <input type="file" id="camIn" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
+      <input type="file" id="galIn" accept="image/*" style="display:none" onchange="onPhoto(event)">
+      ${hasPhoto ? `<div class="ext-box" id="extBox">
+        <div class="ext-row">
+          <span class="ext-icon" id="extIcon">⏳</span>
+          <div class="spinner" id="extSpinner"></div>
+          <span class="ext-lbl" id="extLbl">Analysing photo…</span>
+        </div>
+        <div class="ext-num pulse" id="extNum">. . .</div>
+        <div class="ext-conf" id="extConf"></div>
+      </div>` : ''}`;
+
+    if (hasPhoto && !cap.extracted) { setTimeout(doExtract, 80); document.getElementById('btnNext').disabled = true; }
+    else if (hasPhoto && cap.extracted) { showExtResult(); }
+    else { document.getElementById('btnNext').disabled = true; }
+
+  } else if (s===2) {
+    const {unit} = mInfo(S.meters.find(m=>m.id===cap.meterId));
+    c.innerHTML = `
+      <div class="form-group">
+        <div class="form-label">Meter Reading (${unit})</div>
+        <input class="form-input" type="number" id="confRead" value="${cap.extracted||''}" step="0.1" inputmode="decimal" placeholder="e.g. 12345.6">
+      </div>
+      ${cap.photoData ? `<div style="border-radius:var(--r-sm);overflow:hidden"><img src="${cap.photoData}" style="width:100%;max-height:140px;object-fit:cover"></div>` : ''}
+      <div class="form-hint">Edit if the AI reading wasn't accurate</div>`;
+
+  } else if (s===3) {
+    const now = new Date();
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:13px">
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Date</div><input class="form-input" type="date" id="rDate" value="${now.toISOString().split('T')[0]}"></div>
+        <div class="form-group"><div class="form-label">Time</div><input class="form-input" type="time" id="rTime" value="${now.toTimeString().slice(0,5)}"></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Notes (optional)</div>
+        <input class="form-input form-txt" type="text" id="rNotes" placeholder="e.g. after holiday…" maxlength="100">
+      </div>
+    </div>`;
+  }
+}
+
+function selCapMeter(id) { cap.meterId = id; renderCapStep(); }
+function trigCam() { document.getElementById('camIn')?.click(); }
+function trigGal() { document.getElementById('galIn')?.click(); }
+
+function onPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    cap.photoData = ev.target.result;
+    cap.extracted = null;
+    renderCapStep();
+  };
+  reader.readAsDataURL(file);
+}
+
+function capBack() {
+  if (cap.step===0) { goScreen('dash'); return; }
+  cap.step--;
+  if (cap.step===0 && S.meters.length===1) { goScreen('dash'); return; }
+  renderCapStep();
+}
+
+function capNext() {
+  if (cap.step===0) {
+    if (!cap.meterId) { toast('Select a meter','err'); return; }
+    cap.step=1;
+  } else if (cap.step===1) {
+    if (!cap.extracted) { toast('Add a photo first','err'); return; }
+    cap.step=2;
+  } else if (cap.step===2) {
+    const v = document.getElementById('confRead').value;
+    if (!v||isNaN(parseFloat(v))) { toast('Enter a valid reading','err'); return; }
+    cap.confirmed = v;
+    cap.step=3;
+  } else if (cap.step===3) {
+    saveReading(); return;
+  }
+  renderCapStep();
+}
+
+// ── AI EXTRACTION ──
+async function doExtract() {
+  document.getElementById('btnNext').disabled = true;
+  const prov = S.aiProvider;
+  const prompt = 'Extract the numeric meter reading from this image. Return ONLY valid JSON with no extra text: {"reading":"<number>","unit":"<unit if visible>","confidence":"high|medium|low","notes":"<any issues>"}';
+
+  // Check key present
+  const keyMap = { groq: S.groqKey, openrouter: S.openrouterKey, gemini: S.geminiKey, claude: S.claudeKey };
+  if (prov==='none' || (prov!=='none' && !keyMap[prov])) {
+    showExtManual(prov==='none' ? 'Manual mode — enter reading below' : 'No API key saved — go to Settings');
+    return;
+  }
+
+  try {
+    const base64    = cap.photoData.split(',')[1];
+    const mediaType = cap.photoData.split(';')[0].split(':')[1];
+    let parsed;
+
+    if (prov==='groq' || prov==='openrouter') {
+      // Both use OpenAI-compatible format
+      const url   = prov==='groq'
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://openrouter.ai/api/v1/chat/completions';
+      const model = prov==='groq'
+        ? 'meta-llama/llama-4-scout-17b-16e-instruct'
+        : 'meta-llama/llama-3.2-11b-vision-instruct:free';
+      const key   = prov==='groq' ? S.groqKey : S.openrouterKey;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+key },
+        body: JSON.stringify({
+          model,
+          max_tokens: 300,
+          temperature: 0.1,
+          messages: [{
+            role: 'user',
+            content: [
+              { type:'image_url', image_url:{ url:`data:${mediaType};base64,${base64}` } },
+              { type:'text', text: prompt }
+            ]
+          }]
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+      const txt = data.choices?.[0]?.message?.content || '';
+      parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+
+    } else if (prov==='gemini') {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.geminiKey}`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{parts:[{inline_data:{mime_type:mediaType,data:base64}},{text:prompt}]}], generationConfig:{maxOutputTokens:300,temperature:0.1} })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+
+    } else if (prov==='claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':S.claudeKey,'anthropic-version':'2023-06-01'},
+        body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:300,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:prompt}
+          ]}]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content?.[0]?.text || '';
+      parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    }
+
+    cap.extracted = parsed.reading;
+    cap.aiConf    = parsed.confidence;
+    cap.aiNotes   = parsed.notes;
+    showExtResult();
+  } catch(err) {
+    showExtError(err.message||'Check API key in Settings');
+  }
+  document.getElementById('btnNext').disabled = false;
+}
+
+function showExtResult() {
+  const conf = cap.aiConf;
+  const cls  = conf==='high'?'conf-hi':conf==='medium'?'conf-md':'conf-lo';
+  const lbl  = conf==='high'?'✓ High confidence':conf==='medium'?'~ Medium confidence':'⚠ Low confidence';
+  document.getElementById('extIcon').textContent    = conf==='high'?'✅':conf==='medium'?'⚡':'⚠️';
+  document.getElementById('extSpinner').style.display = 'none';
+  document.getElementById('extLbl').textContent     = 'Reading extracted';
+  document.getElementById('extNum').textContent     = cap.extracted;
+  document.getElementById('extNum').classList.remove('pulse');
+  document.getElementById('extConf').innerHTML      = `<span class="${cls}">${lbl}</span>${cap.aiNotes?` · <span style="color:var(--text3)">${cap.aiNotes}</span>`:''}`;
+  document.getElementById('btnNext').disabled       = false;
+}
+
+function showExtManual(msg) {
+  document.getElementById('extIcon').textContent    = '✏️';
+  document.getElementById('extSpinner').style.display = 'none';
+  document.getElementById('extLbl').textContent     = 'Enter reading manually';
+  document.getElementById('extNum').textContent     = '?';
+  document.getElementById('extNum').classList.remove('pulse');
+  document.getElementById('extConf').innerHTML      = `<span style="color:var(--text3)">${msg}</span>`;
+  cap.extracted = '0';
+  document.getElementById('btnNext').disabled = false;
+}
+
+function showExtError(msg) {
+  document.getElementById('extIcon').textContent    = '⚠️';
+  document.getElementById('extSpinner').style.display = 'none';
+  document.getElementById('extLbl').textContent     = 'Extraction failed';
+  document.getElementById('extNum').textContent     = '?';
+  document.getElementById('extNum').classList.remove('pulse');
+  document.getElementById('extConf').innerHTML      = `<span class="conf-lo">${msg}</span>`;
+  cap.extracted = '0';
+  cap.aiConf    = 'low';
+  document.getElementById('btnNext').disabled = false;
+}
+
+function saveReading() {
+  const date  = document.getElementById('rDate').value;
+  const time  = document.getElementById('rTime').value;
+  const notes = document.getElementById('rNotes').value.trim();
+  if (!date||!time) { toast('Date and time required','err'); return; }
+  const r = { id:'r_'+Date.now(), meterId:cap.meterId, reading:cap.confirmed,
+    date, time, notes, photoData:cap.photoData, aiConf:cap.aiConf, savedAt:new Date().toISOString() };
+  S.readings.push(r);
+  Store.set('readings', S.readings);
+  S.activeMeter = cap.meterId;
+  renderMeterSelector();
+  renderDashboard();
+  renderHistory();
+  toast('✓ Reading saved!','ok');
+  goScreen('dash');
+}
+
+// ═══════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════
+function renderHistory() {
+  const list   = document.getElementById('histList');
+  const filter = document.getElementById('histFilter')?.value||'all';
+  let readings = filter==='all' ? [...S.readings] : S.readings.filter(r=>r.meterId===filter);
+  readings.sort((a,b)=>new Date(b.date+'T'+b.time)-new Date(a.date+'T'+a.time));
+
+  if (!readings.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-ico">📋</div><div class="empty-title">No readings yet</div><div class="empty-sub">Tap Capture to record your first reading</div></div>`;
+    return;
+  }
+
+  list.innerHTML = readings.map(r => {
+    const meter = S.meters.find(m=>m.id===r.meterId);
+    if (!meter) return '';
+    const {icon,unit} = mInfo(meter);
+    const mrdSorted = S.readings.filter(x=>x.meterId===r.meterId).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const idx  = mrdSorted.findIndex(x=>x.id===r.id);
+    const prev = mrdSorted[idx-1];
+    let consH = '';
+    if (prev) {
+      const cons = parseFloat(r.reading)-parseFloat(prev.reading);
+      consH = `<div class="hi-cons"><div class="hi-cons-val ${cons>=0?'c-pos':'c-neg'}">${cons>=0?'+':''}${cons.toFixed(1)}</div><div class="hi-cons-lbl">${unit}</div></div>`;
+    }
+    return `<div class="hi-item" onclick="showDetail('${r.id}')">
+      <div class="hi-ico">${icon}</div>
+      <div class="hi-body">
+        <div class="hi-name">${meter.name}</div>
+        <div class="hi-reading">${fmtNum(r.reading)}</div>
+        <div class="hi-date">${fmtDate(r.date)} ${r.time}${r.notes?' · '+r.notes:''}</div>
+      </div>
+      ${consH}
+    </div>`;
+  }).join('');
+}
+
+function showDetail(id) {
+  const r = S.readings.find(x=>x.id===id);
+  if (!r) return;
+  const meter = S.meters.find(m=>m.id===r.meterId);
+  if (!meter) return;
+  const {icon,unit} = mInfo(meter);
+  const mrd = S.readings.filter(x=>x.meterId===r.meterId).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const idx  = mrd.findIndex(x=>x.id===id);
+  const prev = mrd[idx-1];
+  let cons='—', daily='—';
+  if (prev) {
+    const c = parseFloat(r.reading)-parseFloat(prev.reading);
+    const d = Math.max(1,(new Date(r.date)-new Date(prev.date))/86400000);
+    cons  = `${c.toFixed(2)} ${unit}`;
+    daily = `${(c/d).toFixed(3)} ${unit}/day`;
+  }
+  const ct = r.aiConf==='high'?'tag-green':r.aiConf==='medium'?'tag-amber':'tag-red';
+  document.getElementById('detailContent').innerHTML = `
+    <div class="modal-title">${icon} ${meter.name}</div>
+    ${r.photoData?`<img src="${r.photoData}" class="photo-thumb">` : ''}
+    <div class="det-reading">${fmtNum(r.reading)}</div>
+    <div style="text-align:center;color:var(--text2);font-size:14px;margin-bottom:14px;margin-top:-6px">${unit}</div>
+    <div class="det-grid">
+      <div class="det-item"><div class="det-lbl">Date</div><div class="det-val">${fmtDate(r.date)}</div></div>
+      <div class="det-item"><div class="det-lbl">Time</div><div class="det-val">${r.time}</div></div>
+      <div class="det-item"><div class="det-lbl">Consumption</div><div class="det-val">${cons}</div></div>
+      <div class="det-item"><div class="det-lbl">Daily Avg</div><div class="det-val">${daily}</div></div>
+    </div>
+    ${r.notes?`<div style="margin:10px 0;padding:11px;background:var(--surface2);border-radius:var(--r-sm);font-size:14px;color:var(--text2)">📝 ${r.notes}</div>`:''}
+    ${r.aiConf?`<div style="text-align:center;margin:8px 0"><span class="tag ${ct}">AI ${r.aiConf} confidence</span></div>`:''}
+    <div style="height:12px"></div>
+    <button class="btn btn-danger btn-full" onclick="delReading('${r.id}')">Delete Reading</button>`;
+  openModal('modalDetail');
+}
+
+function delReading(id) {
+  if (!confirm('Delete this reading?')) return;
+  S.readings = S.readings.filter(r=>r.id!==id);
+  Store.set('readings', S.readings);
+  closeModal('modalDetail');
+  renderHistory();
+  renderDashboard();
+  toast('Reading deleted');
+}
+
+// ═══════════════════════════════════════════
+//  ANALYTICS
+// ═══════════════════════════════════════════
+function setPeriod(p) {
+  analyticsPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.p)===p));
+  renderAnalytics();
+}
+
+function initMiniChart() {
+  Chart.defaults.color='#5a5a70'; Chart.defaults.borderColor='#2a2a38';
+  Chart.defaults.font.family="'Share Tech Mono',monospace";
+  charts.mini = new Chart(document.getElementById('miniChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:'rgba(245,158,11,.4)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+' units/day'}}},
+      scales:{x:{display:false},y:{display:false}}}
+  });
+}
+
+function updateMiniChart(pts) {
+  if (!charts.mini) return;
+  charts.mini.data.labels = pts.map(p=>p.date);
+  charts.mini.data.datasets[0].data = pts.map(p=>Math.max(0,p.v));
+  charts.mini.update();
+}
+
+function renderAnalytics() {
+  if (charts.trend) { charts.trend.destroy(); charts.trend=null; }
+  if (charts.bar)   { charts.bar.destroy();   charts.bar=null;   }
+
+  const tc = document.getElementById('trendChart');
+  const bc = document.getElementById('barChart');
+  if (!tc||!bc) return;
+
+  const meter = S.meters.find(m=>m.id===S.activeMeter);
+  if (!meter) {
+    document.getElementById('insightRows').innerHTML = '<div style="color:var(--text3);font-size:14px;padding:8px 0">Add a meter to see analytics</div>';
+    return;
+  }
+
+  const {unit} = mInfo(meter);
+  const all = S.readings.filter(r=>r.meterId===meter.id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-analyticsPeriod);
+
+  const pts = [];
+  for (let i=1;i<all.length;i++) {
+    if (new Date(all[i].date)<cutoff) continue;
+    const d = Math.max(1,(new Date(all[i].date)-new Date(all[i-1].date))/86400000);
+    const c = parseFloat(all[i].reading)-parseFloat(all[i-1].reading);
+    pts.push({date:all[i].date.slice(5), dailyAvg:c/d, total:c});
+  }
+
+  charts.trend = new Chart(tc.getContext('2d'),{
+    type:'line',
+    data:{labels:pts.map(p=>p.date),datasets:[{label:unit+'/day',data:pts.map(p=>Math.max(0,p.dailyAvg)),
+      borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.1)',fill:true,tension:.4,pointBackgroundColor:'#f59e0b',pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{maxTicksLimit:6}},y:{ticks:{callback:v=>v.toFixed(1)}}}}
+  });
+
+  const mm = {};
+  for (let i=1;i<all.length;i++) {
+    const mo = all[i].date.slice(0,7);
+    mm[mo] = (mm[mo]||0) + Math.max(0,parseFloat(all[i].reading)-parseFloat(all[i-1].reading));
+  }
+  const mos = Object.keys(mm).sort().slice(-6);
+  charts.bar = new Chart(bc.getContext('2d'),{
+    type:'bar',
+    data:{labels:mos.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleString('en',{month:'short',year:'2-digit'});}),
+      datasets:[{data:mos.map(m=>mm[m]),backgroundColor:mos.map((_,i)=>i===mos.length-1?'#f59e0b':'rgba(245,158,11,.35)'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>v.toFixed(0)+' '+unit}}}}
+  });
+
+  if (pts.length>=2) {
+    const avg = pts.reduce((s,p)=>s+p.dailyAvg,0)/pts.length;
+    const lat = pts[pts.length-1].dailyAvg;
+    const trnd = ((lat-avg)/avg*100);
+    const tot  = pts.reduce((s,p)=>s+p.total,0);
+    const hi   = Math.max(...pts.map(p=>p.total));
+    const lo   = Math.min(...pts.map(p=>p.total));
+    document.getElementById('insightRows').innerHTML = `
+      <div class="ins-item"><div class="ins-lbl">Avg daily usage</div><div class="ins-val">${avg.toFixed(2)} ${unit}</div></div>
+      <div class="ins-item"><div class="ins-lbl">Total (${analyticsPeriod}d)</div><div class="ins-val">${tot.toFixed(1)} ${unit}</div></div>
+      <div class="ins-item"><div class="ins-lbl">Trend vs avg</div><div class="ins-val" style="color:${trnd>10?'var(--red)':trnd<-10?'var(--green)':'var(--text)'}">${trnd>0?'+':''}${trnd.toFixed(0)}%</div></div>
+      <div class="ins-item"><div class="ins-lbl">Highest period</div><div class="ins-val">${hi.toFixed(1)} ${unit}</div></div>
+      <div class="ins-item"><div class="ins-lbl">Lowest period</div><div class="ins-val">${lo.toFixed(1)} ${unit}</div></div>`;
+  } else {
+    document.getElementById('insightRows').innerHTML = '<div style="color:var(--text3);font-size:14px;padding:8px 0">Need at least 2 readings to show insights</div>';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════
+function onProviderChange() {
+  const v = document.getElementById('aiProvider')?.value;
+  if (!v) return;
+  document.getElementById('grpGroq').style.display        = v==='groq'        ? 'flex' : 'none';
+  document.getElementById('grpOpenrouter').style.display  = v==='openrouter'  ? 'flex' : 'none';
+  document.getElementById('grpGemini').style.display      = v==='gemini'      ? 'flex' : 'none';
+  document.getElementById('grpClaude').style.display      = v==='claude'      ? 'flex' : 'none';
+}
+
+function saveSettings() {
+  S.aiProvider    = document.getElementById('aiProvider').value;
+  S.groqKey       = document.getElementById('groqKey').value.trim();
+  S.openrouterKey = document.getElementById('openrouterKey').value.trim();
+  S.geminiKey     = document.getElementById('geminiKey').value.trim();
+  S.claudeKey     = document.getElementById('claudeKey').value.trim();
+  Store.set('aiProvider',    S.aiProvider);
+  Store.set('groqKey',       S.groqKey);
+  Store.set('openrouterKey', S.openrouterKey);
+  Store.set('geminiKey',     S.geminiKey);
+  Store.set('claudeKey',     S.claudeKey);
+  toast('✓ Settings saved','ok');
+}
+
+function renderMeterSettings() {
+  const el = document.getElementById('meterSettingsList');
+  if (!el) return;
+  if (!S.meters.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:14px;padding:10px 0">No meters added yet</div>';
+    return;
+  }
+  el.innerHTML = S.meters.map(m => {
+    const {icon,unit} = mInfo(m);
+    const cnt = S.readings.filter(r=>r.meterId===m.id).length;
+    return `<div class="set-item">
+      <div style="flex:1;min-width:0">
+        <div class="set-lbl">${icon} ${m.name}</div>
+        <div class="set-sub">${unit} · ${cnt} reading${cnt!==1?'s':''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="openRename('${m.id}')">Rename</button>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="delMeter('${m.id}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function delMeter(id) {
+  const m = S.meters.find(x=>x.id===id);
+  if (!confirm(`Remove meter "${m?.name}"? Readings will be kept.`)) return;
+  S.meters = S.meters.filter(x=>x.id!==id);
+  if (S.activeMeter===id) S.activeMeter = S.meters[0]?.id||null;
+  Store.set('meters', S.meters);
+  renderMeterSelector(); renderDashboard(); renderMeterSettings();
+  toast('Meter removed');
+}
+
+function openRename(id) {
+  const m = S.meters.find(x=>x.id===id);
+  if (!m) return;
+  document.getElementById('renameMeterId').value = id;
+  document.getElementById('renameInput').value   = m.name;
+  openModal('modalRename');
+  setTimeout(() => document.getElementById('renameInput').focus(), 300);
+}
+
+function confirmRename() {
+  const id   = document.getElementById('renameMeterId').value;
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name) { toast('Enter a name','err'); return; }
+  const m = S.meters.find(x=>x.id===id);
+  if (!m) return;
+  m.name = name;
+  Store.set('meters', S.meters);
+  closeModal('modalRename');
+  renderMeterSelector();
+  renderDashboard();
+  renderMeterSettings();
+  toast('✓ Renamed');
+}
+
+function exportData() {
+  const d = { meters:S.meters, readings:S.readings.map(r=>({...r,photoData:undefined})), exported:new Date().toISOString() };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+  a.download = 'metriq_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('✓ Exported');
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL readings? This cannot be undone.')) return;
+  S.readings = [];
+  Store.set('readings', S.readings);
+  renderDashboard(); renderHistory();
+  toast('All readings cleared');
+}
+
+// ═══════════════════════════════════════════
+//  MODALS + TOAST
+// ═══════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+let toastT;
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type?' '+type:'');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>{ t.className=''; }, 2600);
+}
+
+// ═══════════════════════════════════════════
+//  SERVICE WORKER
+// ═══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  const sw = `const C='mq2-v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['/'])));self.skipWaiting();});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+}
+
+// ── GO ──
+init();
+</script>
+</body>
+</html>
