@@ -287,7 +287,7 @@ select.fi option{background:var(--sf)}
 <!-- ═══ LOGIN ═══ -->
 <div id="loginScreen">
   <div class="ll">⚡ MetrIQ</div>
-  <div class="lt">Smart Meter Reader v8</div>
+  <div class="lt">Smart Meter Reader v9</div>
   <div id="propList" class="pg"></div>
   <div id="pinScreen">
     <div class="ppn" id="pinPropName"></div>
@@ -307,7 +307,7 @@ select.fi option{background:var(--sf)}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v8</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v9</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -416,7 +416,7 @@ select.fi option{background:var(--sf)}
         <div class="si"><div><div class="slbl">Export</div><div class="ssub">Download as JSON</div></div><button class="btn btg" style="padding:6px 11px;font-size:12px" onclick="exportData()">Export</button></div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v8 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v9 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -1173,18 +1173,26 @@ function drawCrop(){
   const W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);ctx.drawImage(img,0,0);
   const b=CR.box,x=b.x*W,y=b.y*H,w=b.w*W,h=b.h*H;
-  // Dim outside
-  ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.fillRect(0,0,W,y);ctx.fillRect(0,y+h,W,H-y-h);ctx.fillRect(0,y,x,h);ctx.fillRect(x+w,y,W-x-w,h);
-  // Box
-  ctx.strokeStyle='#f59e0b';ctx.lineWidth=Math.max(2,W*0.004);ctx.strokeRect(x,y,w,h);
-  ctx.fillStyle='rgba(245,158,11,0.08)';ctx.fillRect(x,y,w,h);
-  // Handles
-  const HR=Math.max(8,W*HANDLE_R);
-  const handles=[[x,y],[x+w/2,y],[x+w,y],[x,y+h/2],[x+w,y+h/2],[x,y+h],[x+w/2,y+h],[x+w,y+h]];
-  handles.forEach(([hx,hy])=>{
-    ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1,W*0.002);ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.stroke();
+  // Dim outside selection
+  ctx.fillStyle='rgba(0,0,0,0.52)';
+  ctx.fillRect(0,0,W,y);ctx.fillRect(0,y+h,W,H-y-h);
+  ctx.fillRect(0,y,x,h);ctx.fillRect(x+w,y,W-x-w,h);
+  // Selection box stroke
+  ctx.strokeStyle='#f59e0b';ctx.lineWidth=Math.max(3,W*0.005);ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle='rgba(245,158,11,0.07)';ctx.fillRect(x,y,w,h);
+  // Handles — radius scaled to native canvas pixels (phone images can be 3000px wide)
+  const HR=Math.max(18, W*0.028); // ~2.8% of image width = clearly visible on any size
+  const handlePts=[[x,y],[x+w/2,y],[x+w,y],[x,y+h/2],[x+w,y+h/2],[x,y+h],[x+w/2,y+h],[x+w,y+h]];
+  handlePts.forEach(([hx,hy])=>{
+    // Outer amber fill
+    ctx.fillStyle='#f59e0b';
+    ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.fill();
+    // White ring
+    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(2,W*0.003);
+    ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.stroke();
+    // Dark centre dot
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.beginPath();ctx.arc(hx,hy,HR*0.35,0,Math.PI*2);ctx.fill();
   });
 }
 
