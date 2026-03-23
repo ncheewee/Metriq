@@ -155,7 +155,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Barlow',
 
 /* ── CROP TOOL ── */
 .crop-wrap{position:relative;border-radius:var(--rs);overflow:hidden;border:1px solid var(--bd);background:#000;touch-action:none;cursor:crosshair}
-.crop-wrap canvas{display:block;width:100%;height:auto;max-height:52vh;object-fit:contain}
+.crop-wrap canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
 .crop-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .crop-reset{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);font-family:'Rajdhani',sans-serif;font-size:calc(13px * var(--fs));font-weight:600;color:var(--tx2);cursor:pointer}
 .crop-extract{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:var(--rs);border:none;background:var(--am);font-family:'Rajdhani',sans-serif;font-size:calc(13px * var(--fs));font-weight:700;color:#000;cursor:pointer;letter-spacing:.5px}
@@ -303,13 +303,13 @@ select.fi option{background:var(--sf)}
     </div>
     <button class="pbk" onclick="backToProp()">← Back</button>
   </div>
-  <div class="lver">v10</div>
+  <div class="lver">v11</div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v10</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v11</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -425,7 +425,7 @@ select.fi option{background:var(--sf)}
         </div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v10 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v11 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -595,46 +595,58 @@ let CR={img:null,box:{x:.05,y:.2,w:.9,h:.6},drag:null,canvas:null,ctx:null};
 // ═══════════════════════════════════════════
 function genDemo(pid){
   const today=new Date('2026-03-20');
-  // Each property gets a different count: p1=18 units, p2=9 units, p3=24 units
   const templates={
-    p1:{
-      prefix:['#B','#01','#02','#03','#04'],
-      descs:['Kiosk','Retail','F&B','Fashion','Anchor','Service','Pop-up','ATM Room','Storage','Mgmt Office','Lobby','Food Court','Pharmacy','Optician','Electronics','Jewellery','Beauty','Sporting'],
-      rates:{electricity:28,water:0.9,gas:0.4}, count:18
-    },
-    p2:{
-      prefix:['#01','#02','#03'],
-      descs:['F&B','Fashion','Anchor','Cinema','Gym','Beauty','Electronics','Books','Toys','Café'],
-      rates:{electricity:32,water:1.1,gas:0.5}, count:9
-    },
-    p3:{
-      prefix:['#01','#02','#03','#04','#05'],
-      descs:['Office','Meeting Rm','Server Rm','Reception','Pantry','Board Rm','HR Suite','Finance','IT Dept','Legal','Operations','Marketing','Admin','Sales','Exec Suite','Lobby','Security','Archive','Loading Bay','Carpark','Utilities','M&E Room','AHU Room','Roof Plant'],
-      rates:{electricity:22,water:0.7,gas:0.25}, count:24
-    },
+    p1:{prefix:['#B','#01','#02','#03','#04'],descs:['Kiosk','Retail','F&B','Fashion','Anchor','Service','Pop-up','ATM Room','Storage','Mgmt Office','Lobby','Food Court','Pharmacy','Optician','Electronics','Jewellery','Beauty','Sporting'],rates:{electricity:28,water:0.9,gas:0.4},count:18},
+    p2:{prefix:['#01','#02','#03'],descs:['F&B','Fashion','Anchor','Cinema','Gym','Beauty','Electronics','Books','Toys','Café'],rates:{electricity:32,water:1.1,gas:0.5},count:9},
+    p3:{prefix:['#01','#02','#03','#04','#05'],descs:['Office','Meeting Rm','Server Rm','Reception','Pantry','Board Rm','HR Suite','Finance','IT Dept','Legal','Operations','Marketing','Admin','Sales','Exec Suite','Lobby','Security','Archive','Loading Bay','Carpark','Utilities','M&E Room','AHU Room','Roof Plant'],rates:{electricity:22,water:0.7,gas:0.25},count:24},
   };
   const tmpl=templates[pid];
   const starts={electricity:45200,water:1240,gas:380};
   const units=[],readings=[];
+
   for(let ui=0;ui<tmpl.count;ui++){
     const uid='u_'+pid+'_'+ui;
     const pfx=tmpl.prefix[ui%tmpl.prefix.length];
     const sub=String(ui+1).padStart(2,'0');
-    const num=`${pfx}-${sub}`;
-    const desc=tmpl.descs[ui%tmpl.descs.length];
-    units.push({id:uid,propId:pid,number:num,desc});
+    units.push({id:uid,propId:pid,number:`${pfx}-${sub}`,desc:tmpl.descs[ui%tmpl.descs.length]});
+
     MDEFS.forEach(md=>{
-      const rate=tmpl.rates[md.type];
-      let val=starts[md.type]+(ui*rate*6);
+      const baseRate=tmpl.rates[md.type];
+      let val=starts[md.type]+(ui*baseRate*6);
+
+      // Pattern assignment — first 5 units get showcase patterns, rest are normal
+      // Pattern: 0=normal, 1=gradual rise, 2=sudden spike (latest), 3=gradual fall, 4=stabilising
+      const pattern=ui<5?ui:0;
+
       for(let i=9;i>=0;i--){
         const dAgo=i*9+Math.floor(Math.random()*2);
         const d=new Date(today);d.setDate(d.getDate()-dAgo);
-        const ds=d.toISOString().split('T')[0];
-        const ts=(8+Math.floor(Math.random()*3)).toString().padStart(2,'0')+':'+(Math.floor(Math.random()*60)).toString().padStart(2,'0');
-        const r=i===2?rate*1.18:rate;
-        val+=9*r*(0.85+Math.random()*0.3);
+        let periodRate=baseRate;
+
+        if(pattern===1){
+          // Gradual rise: each successive reading ~8% higher than previous
+          periodRate=baseRate*(1+(9-i)*0.08);
+        } else if(pattern===2){
+          // Sudden spike on the LAST reading only (i===0)
+          periodRate=i===0?baseRate*4.2:baseRate*(0.9+Math.random()*0.2);
+        } else if(pattern===3){
+          // Gradual decline: business winding down
+          periodRate=baseRate*(1.6-(9-i)*0.07);
+          periodRate=Math.max(periodRate,baseRate*0.3);
+        } else if(pattern===4){
+          // Was high, now stabilising back to normal
+          const halfPoint=4;
+          if(i>halfPoint) periodRate=baseRate*(2.1-Math.random()*0.3);
+          else periodRate=baseRate*(1+((i/halfPoint)*0.3)+(Math.random()-0.5)*0.1);
+        } else {
+          // Normal with realistic small variation
+          periodRate=baseRate*(0.9+Math.random()*0.2);
+        }
+
+        val+=9*periodRate;
         const rv=md.type==='electricity'?Math.round(val*10)/10:Math.round(val*Math.pow(10,md.dec))/Math.pow(10,md.dec);
-        readings.push({id:'rd_'+uid+'_'+md.type+'_'+i,propId:pid,unitId:uid,meterType:md.type,reading:rv.toString(),date:ds,time:ts,notes:'',aiConf:'high',savedAt:d.toISOString()});
+        const ts=(8+Math.floor(Math.random()*3)).toString().padStart(2,'0')+':'+(Math.floor(Math.random()*60)).toString().padStart(2,'0');
+        readings.push({id:'rd_'+uid+'_'+md.type+'_'+i,propId:pid,unitId:uid,meterType:md.type,reading:rv.toString(),date:d.toISOString().split('T')[0],time:ts,notes:'',aiConf:'high',savedAt:d.toISOString()});
       }
     });
   }
@@ -782,6 +794,8 @@ function pickUnit(id){
   updateUSBs();updateHeader();
   renderMTabs('mTabsDash','dash');renderMTabs('mTabsHist','history');renderMTabs('mTabsAnal','analytics');
   renderDashboard();renderHistory();
+  // Always refresh analytics if on that screen, or queue it
+  if(document.getElementById('screen-analytics').classList.contains('active')) renderAnalytics();
 }
 
 // Update all unit selector buttons across screens
@@ -879,24 +893,91 @@ function fDate(d){if(!d)return'';return new Date(d+'T12:00').toLocaleDateString(
 function dBetween(a,b){return Math.max(0,(new Date(b)-new Date(a))/86400000);}
 
 // ═══════════════════════════════════════════
-//  TREND ASSESSMENT
+//  TREND ASSESSMENT — pattern intelligence
 // ═══════════════════════════════════════════
 function assessTrend(rds){
-  if(rds.length<5)return null;
+  if(rds.length<4)return null;
+  const md=MDEFS.find(m=>m.type===rds[0].meterType),u=md?.unit||'units';
+  // Build daily-rate series
   const pts=[];
   for(let i=1;i<rds.length;i++){
     const d=Math.max(1,dBetween(rds[i-1].date,rds[i].date));
     const c=parseFloat(rds[i].reading)-parseFloat(rds[i-1].reading);
-    if(c>=0)pts.push(c/d);
+    if(c>=0)pts.push({rate:c/d,date:rds[i].date});
   }
-  if(pts.length<4)return null;
-  const base=pts.slice(0,-1),avg=base.reduce((s,v)=>s+v,0)/base.length,latest=pts[pts.length-1];
-  const pct=avg>0?((latest-avg)/avg)*100:0;
-  const md=MDEFS.find(m=>m.type===rds[0].meterType),u=md?.unit||'units';
-  if(pct>100) return{lv:'critical',icon:'🔴',lbl:'Abnormally High', txt:`${pct.toFixed(0)}% above normal avg (${avg.toFixed(2)} ${u}/day). Possible leak, fault or unusual activity.`,cls:'t-critical'};
-  if(pct>30)  return{lv:'high',    icon:'🟡',lbl:'Elevated Usage',  txt:`${pct.toFixed(0)}% above normal avg (${avg.toFixed(2)} ${u}/day). Monitor closely.`,cls:'t-high'};
-  if(pct<-40) return{lv:'low',     icon:'🔵',lbl:'Unusually Low',   txt:`${Math.abs(pct).toFixed(0)}% below normal avg. Check for meter or supply issue.`,cls:'t-low'};
-  return{lv:'normal',icon:'🟢',lbl:'Normal',txt:`Within normal range. Avg ${avg.toFixed(2)} ${u}/day.`,cls:'t-normal'};
+  if(pts.length<3)return null;
+
+  const rates=pts.map(p=>p.rate);
+  const mean=rates.reduce((s,v)=>s+v,0)/rates.length;
+  const latest=rates[rates.length-1];
+  const prev=rates.slice(0,-1);
+  const prevMean=prev.reduce((s,v)=>s+v,0)/prev.length;
+  const pct=prevMean>0?((latest-prevMean)/prevMean)*100:0;
+
+  // Variance — detect sudden vs gradual
+  const variance=rates.reduce((s,v)=>s+(v-mean)**2,0)/rates.length;
+  const stdDev=Math.sqrt(variance);
+  const cv=mean>0?stdDev/mean:0; // coefficient of variation
+
+  // Linear regression slope — detect gradual trend
+  const n=rates.length;
+  let sumX=0,sumY=0,sumXY=0,sumX2=0;
+  rates.forEach((r,i)=>{sumX+=i;sumY+=r;sumXY+=i*r;sumX2+=i*i;});
+  const slope=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX);
+  const slopePct=mean>0?(slope/mean)*100:0; // % change per reading
+
+  // Sudden spike: last point is outlier (>2.5 std devs above mean of previous)
+  const prevStd=prev.length>1?Math.sqrt(prev.reduce((s,v)=>s+(v-prevMean)**2,0)/prev.length):0;
+  const isSuddenSpike=prevStd>0&&(latest-prevMean)>2.5*prevStd&&pct>80;
+  const isSuddenDrop =prevStd>0&&(prevMean-latest)>2.5*prevStd&&pct<-50;
+
+  // Gradual increase/decrease: consistent slope, low variance
+  const isGradualRise=slopePct>3&&cv<0.3&&!isSuddenSpike;
+  const isGradualFall=slopePct<-3&&cv<0.3&&!isSuddenDrop;
+
+  // Stabilising: was abnormal earlier, recent points converging toward mean
+  const earlyMean=rates.slice(0,Math.floor(n/2)).reduce((s,v)=>s+v,0)/Math.floor(n/2);
+  const recentMean=rates.slice(Math.floor(n/2)).reduce((s,v)=>s+v,0)/Math.ceil(n/2);
+  const isStabilising=Math.abs(earlyMean-mean)/mean>0.25&&Math.abs(recentMean-mean)/mean<0.12;
+
+  const avg=prevMean.toFixed(md.dec);
+  const latF=latest.toFixed(md.dec);
+  const slopeSig=(Math.abs(slopePct)*rates.length).toFixed(0);
+
+  if(isSuddenSpike)
+    return{lv:'critical',icon:'🔴',lbl:'Sudden Spike Detected',
+      txt:`Last reading shows ${pct.toFixed(0)}% surge above baseline (${avg} ${u}/day). Sudden spikes may indicate meter fault, leak, or unauthorised usage. Verify meter and check for anomalies.`,cls:'t-critical'};
+
+  if(isSuddenDrop)
+    return{lv:'critical',icon:'🔴',lbl:'Sudden Drop Detected',
+      txt:`Usage dropped ${Math.abs(pct).toFixed(0)}% below baseline — potentially a meter fault, supply interruption, or unit vacancy. Inspect meter and confirm occupancy status.`,cls:'t-critical'};
+
+  if(pct>100)
+    return{lv:'critical',icon:'🔴',lbl:'Abnormally High',
+      txt:`Current rate ${latF} ${u}/day is ${pct.toFixed(0)}% above normal (${avg}/day). Check for equipment fault or unusual activity.`,cls:'t-critical'};
+
+  if(isGradualRise&&pct>15)
+    return{lv:'high',icon:'🟡',lbl:'Gradual Upward Trend',
+      txt:`Consumption rising steadily — up ~${slopeSig}% over the recording period. Could reflect business growth, seasonal load, or gradual equipment degradation. Monitor closely.`,cls:'t-high'};
+
+  if(pct>30)
+    return{lv:'high',icon:'🟡',lbl:'Elevated Usage',
+      txt:`${pct.toFixed(0)}% above normal average (${avg} ${u}/day). Worth investigating.`,cls:'t-high'};
+
+  if(isGradualFall&&pct<-15)
+    return{lv:'low',icon:'🔵',lbl:'Gradual Downward Trend',
+      txt:`Consumption declining steadily — down ~${slopeSig}% over the recording period. May reflect operational changes, efficiency gains, or reduced occupancy.`,cls:'t-low'};
+
+  if(pct<-40)
+    return{lv:'low',icon:'🔵',lbl:'Unusually Low',
+      txt:`${Math.abs(pct).toFixed(0)}% below normal average. Check for meter issue or reduced operations.`,cls:'t-low'};
+
+  if(isStabilising)
+    return{lv:'normal',icon:'🟢',lbl:'Stabilising',
+      txt:`Usage was irregular earlier but is converging toward normal range (${avg} ${u}/day). Situation appears to be resolving.`,cls:'t-normal'};
+
+  return{lv:'normal',icon:'🟢',lbl:'Normal',
+    txt:`Consumption stable at ${avg} ${u}/day. No anomalies detected.`,cls:'t-normal'};
 }
 
 // ═══════════════════════════════════════════
@@ -1139,113 +1220,113 @@ function getRefCard(){
 }
 
 // ═══════════════════════════════════════════
-//  INTERACTIVE CROP TOOL
+//  INTERACTIVE CROP TOOL — pointer events, native px
 // ═══════════════════════════════════════════
 function initCropTool(canvasId){
   const cv=document.getElementById(canvasId);if(!cv)return;
   CR.canvas=cv;CR.ctx=cv.getContext('2d');CR.img=new Image();
   CR.img.onload=()=>{
-    // Set canvas native resolution
     cv.width=CR.img.width;cv.height=CR.img.height;
     drawCrop();
-    // Mouse events
-    cv.addEventListener('mousedown',cropStart);cv.addEventListener('mousemove',cropMove);cv.addEventListener('mouseup',cropEnd);
-    // Touch events (mobile)
-    cv.addEventListener('touchstart',e=>{e.preventDefault();cropStart(e.touches[0]);},{passive:false});
-    cv.addEventListener('touchmove',e=>{e.preventDefault();cropMove(e.touches[0]);},{passive:false});
-    cv.addEventListener('touchend',e=>{e.preventDefault();cropEnd();},{passive:false});
+    cv.addEventListener('pointerdown', onCropDown);
+    cv.addEventListener('pointermove', onCropMove);
+    cv.addEventListener('pointerup',   onCropUp);
+    cv.addEventListener('pointercancel',onCropUp);
   };
   CR.img.src=cap.photo;
 }
 
-const HANDLE_PX=28; // hit radius in CSS pixels — large enough for fat fingers
-function getHandle(e){
-  // Work in CSS pixel space for reliable touch hit detection
+// Convert client coords → native canvas pixels (corrects for CSS scaling)
+function c2n(e){
   const r=CR.canvas.getBoundingClientRect();
-  const px=e.clientX-r.left, py=e.clientY-r.top;
-  const W=r.width, H=r.height;
-  const b=CR.box;
+  return{
+    x:(e.clientX-r.left)*CR.img.width /r.width,
+    y:(e.clientY-r.top) *CR.img.height/r.height
+  };
+}
+// Box in normalised 0–1 → native px rect
+function boxNative(){
+  const W=CR.img.width,H=CR.img.height,b=CR.box;
+  return{x:b.x*W,y:b.y*H,w:b.w*W,h:b.h*H};
+}
+// Hit radius in native px — 4% of image width, plenty for fat fingers
+function HR(){return Math.max(30,CR.img.width*0.04);}
+
+function getHandleNative(pt){
+  const bn=boxNative(),hr=HR();
   const handles=[
-    {id:'tl',x:b.x*W,        y:b.y*H},
-    {id:'tm',x:(b.x+b.w/2)*W,y:b.y*H},
-    {id:'tr',x:(b.x+b.w)*W,  y:b.y*H},
-    {id:'ml',x:b.x*W,        y:(b.y+b.h/2)*H},
-    {id:'mr',x:(b.x+b.w)*W,  y:(b.y+b.h/2)*H},
-    {id:'bl',x:b.x*W,        y:(b.y+b.h)*H},
-    {id:'bm',x:(b.x+b.w/2)*W,y:(b.y+b.h)*H},
-    {id:'br',x:(b.x+b.w)*W,  y:(b.y+b.h)*H},
+    {id:'tl',x:bn.x,          y:bn.y},
+    {id:'tm',x:bn.x+bn.w/2,   y:bn.y},
+    {id:'tr',x:bn.x+bn.w,     y:bn.y},
+    {id:'ml',x:bn.x,           y:bn.y+bn.h/2},
+    {id:'mr',x:bn.x+bn.w,     y:bn.y+bn.h/2},
+    {id:'bl',x:bn.x,           y:bn.y+bn.h},
+    {id:'bm',x:bn.x+bn.w/2,   y:bn.y+bn.h},
+    {id:'br',x:bn.x+bn.w,     y:bn.y+bn.h},
   ];
   for(const h of handles){
-    if(Math.sqrt((px-h.x)**2+(py-h.y)**2)<HANDLE_PX)return h.id;
+    if(Math.hypot(pt.x-h.x,pt.y-h.y)<hr)return h.id;
   }
   return null;
 }
-function inBox(e){
-  const r=CR.canvas.getBoundingClientRect();
-  const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
-  const b=CR.box;
-  return px>b.x&&px<b.x+b.w&&py>b.y&&py<b.y+b.h;
-}
+function inBoxNative(pt){const bn=boxNative();return pt.x>bn.x&&pt.x<bn.x+bn.w&&pt.y>bn.y&&pt.y<bn.y+bn.h;}
 
-function cropStart(e){
-  const h=getHandle(e);
-  const r=CR.canvas.getBoundingClientRect();
-  const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
-  if(h){
-    CR.drag={type:'handle',id:h,startN:{x:nx,y:ny},box:{...CR.box}};
-  } else if(inBox(e)){
-    CR.drag={type:'move',startN:{x:nx,y:ny},box:{...CR.box}};
+function onCropDown(e){
+  e.preventDefault();
+  CV_setCapture(e);
+  const pt=c2n(e);
+  const hid=getHandleNative(pt);
+  const bn=boxNative();
+  if(hid){
+    // Store offset from pointer to the relevant edge(s) in native px
+    CR.drag={type:'handle',id:hid,pt0:{...pt},
+      left0:bn.x, top0:bn.y, right0:bn.x+bn.w, bottom0:bn.y+bn.h};
+  }else if(inBoxNative(pt)){
+    CR.drag={type:'move',pt0:{...pt},box0:{...CR.box}};
   }
 }
-function cropMove(e){
+function onCropMove(e){
+  e.preventDefault();
   if(!CR.drag)return;
-  const r=CR.canvas.getBoundingClientRect();
-  // Delta is always from the ORIGINAL drag-start position (not previous frame)
-  const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
-  const dx=nx-CR.drag.startN.x, dy=ny-CR.drag.startN.y;
-  const ob=CR.drag.box, MIN=0.06;
+  const pt=c2n(e);
+  const W=CR.img.width,H=CR.img.height;
+  const MIN=W*0.06; // min box size = 6% of image
   if(CR.drag.type==='move'){
-    CR.box.x=Math.max(0,Math.min(1-ob.w, ob.x+dx));
-    CR.box.y=Math.max(0,Math.min(1-ob.h, ob.y+dy));
-  } else {
-    let x=ob.x, y=ob.y, w=ob.w, h=ob.h;
+    const dx=(pt.x-CR.drag.pt0.x)/W, dy=(pt.y-CR.drag.pt0.y)/H;
+    CR.box.x=Math.max(0,Math.min(1-CR.drag.box0.w, CR.drag.box0.x+dx));
+    CR.box.y=Math.max(0,Math.min(1-CR.drag.box0.h, CR.drag.box0.y+dy));
+  }else{
     const id=CR.drag.id;
-    // Each handle modifies specific edges using the ORIGINAL box as reference
-    if(id==='tl'||id==='ml'||id==='bl'){ const nx2=Math.max(0,Math.min(ob.x+ob.w-MIN,ob.x+dx)); w=ob.x+ob.w-nx2; x=nx2; }
-    if(id==='tr'||id==='mr'||id==='br'){ w=Math.max(MIN,Math.min(1-ob.x, ob.w+dx)); }
-    if(id==='tl'||id==='tm'||id==='tr'){ const ny2=Math.max(0,Math.min(ob.y+ob.h-MIN,ob.y+dy)); h=ob.y+ob.h-ny2; y=ny2; }
-    if(id==='bl'||id==='bm'||id==='br'){ h=Math.max(MIN,Math.min(1-ob.y, ob.h+dy)); }
-    CR.box={x,y,w,h};
+    const dx=pt.x-CR.drag.pt0.x, dy=pt.y-CR.drag.pt0.y;
+    let L=CR.drag.left0, T=CR.drag.top0, R=CR.drag.right0, B=CR.drag.bottom0;
+    // Each handle moves specific edges from their drag-start positions
+    if(id==='tl'||id==='ml'||id==='bl') L=Math.max(0,         Math.min(R-MIN, L+dx));
+    if(id==='tr'||id==='mr'||id==='br') R=Math.max(L+MIN,     Math.min(W,     R+dx));
+    if(id==='tl'||id==='tm'||id==='tr') T=Math.max(0,         Math.min(B-MIN, T+dy));
+    if(id==='bl'||id==='bm'||id==='br') B=Math.max(T+MIN,     Math.min(H,     B+dy));
+    CR.box={x:L/W, y:T/H, w:(R-L)/W, h:(B-T)/H};
   }
   drawCrop();
 }
-function cropEnd(){CR.drag=null;}
+function onCropUp(e){e.preventDefault();CR.drag=null;CV_releaseCapture(e);}
+function CV_setCapture(e){try{CR.canvas.setPointerCapture(e.pointerId);}catch{}}
+function CV_releaseCapture(e){try{CR.canvas.releasePointerCapture(e.pointerId);}catch{}}
 
 function drawCrop(){
   const cv=CR.canvas,ctx=CR.ctx,img=CR.img;if(!cv||!ctx||!img)return;
   const W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);ctx.drawImage(img,0,0);
   const b=CR.box,x=b.x*W,y=b.y*H,w=b.w*W,h=b.h*H;
-  // Dim outside selection
   ctx.fillStyle='rgba(0,0,0,0.52)';
   ctx.fillRect(0,0,W,y);ctx.fillRect(0,y+h,W,H-y-h);
   ctx.fillRect(0,y,x,h);ctx.fillRect(x+w,y,W-x-w,h);
-  // Selection box stroke
   ctx.strokeStyle='#f59e0b';ctx.lineWidth=Math.max(3,W*0.005);ctx.strokeRect(x,y,w,h);
   ctx.fillStyle='rgba(245,158,11,0.07)';ctx.fillRect(x,y,w,h);
-  // Handles — radius scaled to native canvas pixels (phone images can be 3000px wide)
-  const HR=Math.max(18, W*0.028); // ~2.8% of image width = clearly visible on any size
-  const handlePts=[[x,y],[x+w/2,y],[x+w,y],[x,y+h/2],[x+w,y+h/2],[x,y+h],[x+w/2,y+h],[x+w,y+h]];
-  handlePts.forEach(([hx,hy])=>{
-    // Outer amber fill
-    ctx.fillStyle='#f59e0b';
-    ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.fill();
-    // White ring
-    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(2,W*0.003);
-    ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);ctx.stroke();
-    // Dark centre dot
-    ctx.fillStyle='rgba(0,0,0,0.5)';
-    ctx.beginPath();ctx.arc(hx,hy,HR*0.35,0,Math.PI*2);ctx.fill();
+  const hr=HR();
+  [[x,y],[x+w/2,y],[x+w,y],[x,y+h/2],[x+w,y+h/2],[x,y+h],[x+w/2,y+h],[x+w,y+h]].forEach(([hx,hy])=>{
+    ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(hx,hy,hr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(2,W*0.003);ctx.beginPath();ctx.arc(hx,hy,hr,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.45)';ctx.beginPath();ctx.arc(hx,hy,hr*0.32,0,Math.PI*2);ctx.fill();
   });
 }
 
@@ -1573,13 +1654,22 @@ function renderAnalytics(){
   const mos=Object.keys(mm).sort().slice(-6);
   CH.bar=new Chart(bc.getContext('2d'),{type:'bar',data:{labels:mos.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleString('en',{month:'short',year:'2-digit'});}),datasets:[{data:mos.map(m=>mm[m]),backgroundColor:mos.map((_,i)=>i===mos.length-1?am:'rgba(245,158,11,.35)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v.toFixed(1)+' '+md.unit}}}}});
   if(pts.length>=2){
-    const avg=pts.reduce((s,p)=>s+p.dAvg,0)/pts.length,tot=pts.reduce((s,p)=>s+p.total,0),hi=Math.max(...pts.map(p=>p.total)),lo=Math.min(...pts.map(p=>p.total)),lat=pts[pts.length-1].dAvg,trnd=avg>0?((lat-avg)/avg*100):0;
+    const avg=pts.reduce((s,p)=>s+p.dAvg,0)/pts.length,tot=pts.reduce((s,p)=>s+p.total,0);
+    const hi=Math.max(...pts.map(p=>p.total)),lo=Math.min(...pts.map(p=>p.total));
+    const lat=pts[pts.length-1].dAvg,trnd=avg>0?((lat-avg)/avg*100):0;
     const tr=assessTrend(all);
+    const insightNarrative=tr ? (
+      tr.lv==='critical' ? `<div class="ii"><div class="il" style="color:var(--rd)">⚠ Action Required</div><div class="iv" style="color:var(--rd);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
+      tr.lv==='high'     ? `<div class="ii"><div class="il" style="color:var(--yl)">⚠ Monitor</div><div class="iv" style="color:var(--yl);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
+      tr.lv==='low'      ? `<div class="ii"><div class="il" style="color:var(--bl)">ℹ Check</div><div class="iv" style="color:var(--bl);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
+                           `<div class="ii"><div class="il" style="color:var(--gn)">✓ Assessment</div><div class="iv" style="color:var(--gn);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>`
+    ) : '';
     document.getElementById('insightRows').innerHTML=`
       ${tr?`<div class="ii"><div class="il">Status</div><div class="iv" style="color:${tr.lv==='critical'?'var(--rd)':tr.lv==='high'?'var(--yl)':tr.lv==='low'?'var(--bl)':'var(--gn)'}">${tr.icon} ${tr.lbl}</div></div>`:''}
+      ${insightNarrative}
       <div class="ii"><div class="il">Avg daily</div><div class="iv">${avg.toFixed(md.dec)} ${md.unit}</div></div>
       <div class="ii"><div class="il">Total (${apd}d)</div><div class="iv">${tot.toFixed(md.dec)} ${md.unit}</div></div>
-      <div class="ii"><div class="il">Trend vs avg</div><div class="iv" style="color:${trnd>30?'var(--rd)':trnd<-30?'var(--bl)':'var(--gn)'}">${trnd>0?'+':''}${trnd.toFixed(0)}%</div></div>
+      <div class="ii"><div class="il">vs period avg</div><div class="iv" style="color:${trnd>30?'var(--rd)':trnd<-30?'var(--bl)':'var(--gn)'}">${trnd>0?'+':''}${trnd.toFixed(0)}% (latest period)</div></div>
       <div class="ii"><div class="il">Highest period</div><div class="iv">${hi.toFixed(md.dec)} ${md.unit}</div></div>
       <div class="ii"><div class="il">Lowest period</div><div class="iv">${lo.toFixed(md.dec)} ${md.unit}</div></div>`;
   }else{document.getElementById('insightRows').innerHTML='<div style="color:var(--tx3);font-size:13px;padding:7px 0">Need readings within selected period</div>';}
@@ -1723,6 +1813,54 @@ function generateReport(){
   else if(goodCount)propInsight+=`<span style="color:#059669">${goodCount} unit${goodCount>1?'s':''} normal.</span>`;
   if(!propInsight)propInsight='<span style="color:#666">Insufficient trend data — more readings needed.</span>';
 
+  // ── build consumption bar chart data (SVG) for each meter type ──
+  function svgBar(data,labels,color,unit){
+    if(!data.length)return'';
+    const max=Math.max(...data,0.001);
+    const W=520,H=90,pad=30,barW=Math.min(36,Math.floor((W-pad*2)/data.length)-4);
+    const bars=data.map((v,i)=>{
+      const h=Math.round((v/max)*(H-20));
+      const x=pad+i*(W-pad*2)/data.length+(((W-pad*2)/data.length)-barW)/2;
+      const y=H-10-h;
+      const col=v===max?color:'#f3d87a';
+      return`<rect x="${x}" y="${y}" width="${barW}" height="${h}" fill="${col}" rx="2"/>
+      <text x="${x+barW/2}" y="${H-1}" font-size="8" fill="#888" text-anchor="middle">${labels[i]}</text>
+      ${h>14?`<text x="${x+barW/2}" y="${y-3}" font-size="8" fill="#555" text-anchor="middle">${v.toFixed(1)}</text>`:''}`;
+    }).join('');
+    return`<svg width="${W}" height="${H+10}" style="display:block;margin:6px 0">${bars}</svg>`;
+  }
+
+  // Build bar chart per meter type (top-N units by consumption)
+  const chartSections = mTypes.map(md=>{
+    const unitConsumptions = unitData.map(ud=>{
+      const m=ud.meters.find(x=>x.md.type===md.type);
+      return{label:ud.u.number,val:m?.total??0};
+    }).filter(x=>x.val>0).sort((a,b)=>b.val-a.val).slice(0,12);
+    if(!unitConsumptions.length)return'';
+    const svg=svgBar(unitConsumptions.map(x=>x.val),unitConsumptions.map(x=>x.label),accentColor,md.unit);
+    return`<h2>${md.icon} ${md.label} — Consumption by Unit (${md.unit})</h2>${svg}`;
+  }).join('');
+
+  // Flagged units section
+  const flaggedUnits = unitData.filter(ud=>ud.meters.some(m=>m.trend&&m.trend.lv!=='normal'));
+  const flaggedSection = flaggedUnits.length ? `
+    <h2>⚠ Flagged Units — Requires Attention</h2>
+    <table>
+      <thead><tr><th>Unit</th><th>Description</th><th>Meter</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>${flaggedUnits.flatMap(ud=>ud.meters.filter(m=>m.trend&&m.trend.lv!=='normal').map(m=>{
+        const col=m.trend.lv==='critical'?'#dc2626':'#ca8a04';
+        const bg=m.trend.lv==='critical'?'#fef2f2':'#fffbeb';
+        return`<tr style="background:${bg}">
+          <td style="font-weight:700;color:${col}">${ud.u.number}</td>
+          <td style="font-size:11px;color:#555">${ud.u.desc||''}</td>
+          <td>${m.md.icon} ${m.md.label}</td>
+          <td style="color:${col};font-weight:600">${m.trend.icon} ${m.trend.lbl}</td>
+          <td style="font-size:11px">${m.trend.txt}</td>
+        </tr>`;
+      })).join('')}
+      </tbody>
+    </table>` : `<h2>Flagged Units</h2><div style="padding:10px;background:#f0fdf4;border-radius:6px;color:#059669;font-size:13px">✓ No units flagged — all within normal operating parameters.</div>`;
+
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>MetrIQ Report — ${S.prop?.name} — ${reportDate}</title>
   <style>
@@ -1731,29 +1869,29 @@ function generateReport(){
     h1{font-size:22px;font-weight:700;color:${accentColor};letter-spacing:1px}
     h2{font-size:14px;font-weight:700;color:#1a1a1a;margin:22px 0 8px;border-bottom:2px solid ${accentColor};padding-bottom:4px}
     .meta{font-size:11px;color:#666;margin:3px 0}
-    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
     .scard{border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;background:#fffbeb}
     .scard .num{font-size:22px;font-weight:700;color:${accentColor}}
     .scard .lbl{font-size:11px;color:#666;margin-top:2px}
-    .prop-insight{background:#fffbeb;border:1.5px solid ${accentColor};border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;line-height:1.5}
-    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
-    th{background:#f9fafb;padding:7px 8px;text-align:left;border:1px solid #e5e7eb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-    td{padding:7px 8px;border:1px solid #f0f0f0;vertical-align:top}
+    .prop-insight{background:#fffbeb;border:1.5px solid ${accentColor};border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.6}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+    th{background:#f9fafb;padding:6px 8px;text-align:left;border:1px solid #e5e7eb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:6px 8px;border:1px solid #f0f0f0;vertical-align:top}
     tr:nth-child(even) td{background:#fafafa}
-    .footer{margin-top:28px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}
-    @media print{body{padding:14px 18px}button{display:none}}
+    .footer{margin-top:24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}
+    @media print{body{padding:14px 18px}button{display:none}.page-break{page-break-before:always}}
   </style></head><body>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
     <div>
       <h1>⚡ MetrIQ — Property Meter Report</h1>
       <div class="meta"><strong>${S.prop?.icon||''} ${S.prop?.name||'Property'}</strong></div>
       <div class="meta">Period: ${periodLabel}</div>
-      <div class="meta">Generated: ${reportDate} · Units included: ${units.length} · Meters: ${mTypes.map(m=>m.label).join(', ')}</div>
+      <div class="meta">Generated: ${reportDate} · ${units.length} units · ${mTypes.map(m=>m.label).join(', ')}</div>
     </div>
     <button onclick="window.print()" style="padding:8px 18px;background:${accentColor};color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">🖨 Print / Save PDF</button>
   </div>
 
-  <h2>Property Summary</h2>
+  <h2>Property Overview</h2>
   <div class="prop-insight"><strong>Overall Assessment:</strong> ${propInsight}</div>
   <div class="summary-grid">
     ${propSummary.filter(s=>s.total!=null).map(s=>`
@@ -1763,34 +1901,35 @@ function generateReport(){
     </div>`).join('')}
   </div>
 
-  <h2>Unit Detail</h2>
+  ${flaggedSection}
+
+  ${chartSections}
+
+  <h2>Full Unit Detail</h2>
   <table>
     <thead>
-      <tr>
-        <th rowspan="2">Unit</th>
-        <th rowspan="2">Description</th>
-        ${mHeaders}
-        <th rowspan="2">Assessment</th>
-      </tr>
+      <tr><th rowspan="2">Unit</th><th rowspan="2">Description</th>${mHeaders}<th rowspan="2">Assessment</th></tr>
       <tr>${mSubHeaders}</tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
 
-  <h2>Trend Legend</h2>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-top:6px">
-    <span>🟢 Normal</span><span>🟡 Elevated (+30–100% above avg)</span>
-    <span>🔴 Critical (+100% above avg)</span><span>🔵 Unusually low (−40%+ below avg)</span>
+  <h2>Trend Guide</h2>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:6px">
+    <span>🟢 Normal — stable within expected range</span>
+    <span>🟡 Elevated — +30% to +100% above avg</span>
+    <span>🔴 Critical — sudden spike, sharp drop, or +100% above avg</span>
+    <span>🔵 Low — −40%+ below avg, check meter/supply</span>
   </div>
 
-  <div class="footer">MetrIQ v10 · Smart Meter Management · Report generated ${new Date().toISOString()}</div>
+  <div class="footer">MetrIQ v11 · Smart Meter Management · ${new Date().toISOString()}</div>
   </body></html>`;
 
   closeM('mReport');
-  const w=window.open('','_blank','width=900,height=700');
+  const w=window.open('','_blank','width=960,height=750');
   w.document.write(html);
   w.document.close();
-  setTimeout(()=>w.print(),600);
+  setTimeout(()=>w.print(),700);
 }
 
 // ── END REPORT ──
