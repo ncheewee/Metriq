@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0c0c0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MetrIQ">
-<title>MetrIQ v4</title>
+<title>MetrIQ</title>
 <link rel="manifest" href="data:application/json,{%22name%22:%22MetrIQ%22,%22short_name%22:%22MetrIQ%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230c0c0f%22,%22theme_color%22:%22%230c0c0f%22}">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -37,10 +37,11 @@ body.light{
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Barlow',sans-serif;overflow:hidden;transition:background .2s,color .2s}
 
 /* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px 40px;transition:opacity .3s}
+#loginScreen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:60px 20px 32px;transition:opacity .3s}
 #loginScreen.hidden{opacity:0;pointer-events:none}
-.ll{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:34px;letter-spacing:3px;color:var(--am);margin-bottom:3px}
-.lt{font-size:calc(12px * var(--fs));color:var(--tx3);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px}
+.ll{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:38px;letter-spacing:3px;color:var(--am);margin-bottom:4px}
+.lt{font-size:calc(12px * var(--fs));color:var(--tx2);letter-spacing:2px;text-transform:uppercase;margin-bottom:32px}
+.lver{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:1px}
 .pg{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px}
 .pc{display:flex;align-items:center;gap:14px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:15px;cursor:pointer;transition:all .2s}
 .pc:active{border-color:var(--am);background:var(--amg)}
@@ -287,7 +288,7 @@ select.fi option{background:var(--sf)}
 <!-- ═══ LOGIN ═══ -->
 <div id="loginScreen">
   <div class="ll">⚡ MetrIQ</div>
-  <div class="lt">Smart Meter Reader v9</div>
+  <div class="lt">Smart Meter Reader</div>
   <div id="propList" class="pg"></div>
   <div id="pinScreen">
     <div class="ppn" id="pinPropName"></div>
@@ -302,12 +303,13 @@ select.fi option{background:var(--sf)}
     </div>
     <button class="pbk" onclick="backToProp()">← Back</button>
   </div>
+  <div class="lver">v10</div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v9</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v10</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -413,10 +415,17 @@ select.fi option{background:var(--sf)}
       </div>
       <div class="card">
         <div class="stitle" style="margin-bottom:4px">Data</div>
-        <div class="si"><div><div class="slbl">Export</div><div class="ssub">Download as JSON</div></div><button class="btn btg" style="padding:6px 11px;font-size:12px" onclick="exportData()">Export</button></div>
+        <div class="si">
+          <div><div class="slbl">Management Report</div><div class="ssub">PDF — selected units, meters, period</div></div>
+          <button class="btn btg" style="padding:6px 11px;font-size:12px" onclick="openReportModal()">Generate</button>
+        </div>
+        <div class="si">
+          <div><div class="slbl">Export Raw Data</div><div class="ssub">Download as JSON</div></div>
+          <button class="btn btg" style="padding:6px 11px;font-size:12px" onclick="exportData()">Export</button>
+        </div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v9 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v10 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -481,6 +490,54 @@ select.fi option{background:var(--sf)}
     <div id="assessContent"></div>
     <div style="height:12px"></div>
     <button class="btn btp wf" onclick="closeM('mAssess')">Got it</button>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="ov" id="mReport">
+  <div class="modal">
+    <div class="mh"></div>
+    <div class="mt">Generate Report</div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div class="fg">
+        <div class="fl">Period</div>
+        <select class="fi" id="rptPeriod">
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last 12 months</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Meters</div>
+        <div style="display:flex;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--fs));color:var(--tx);cursor:pointer;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none">
+            <input type="checkbox" id="rptElec" checked style="accent-color:var(--am);width:16px;height:16px"> ⚡ Electricity
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--fs));color:var(--tx);cursor:pointer;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none">
+            <input type="checkbox" id="rptWater" checked style="accent-color:var(--am);width:16px;height:16px"> 💧 Water
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--fs));color:var(--tx);cursor:pointer;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none">
+            <input type="checkbox" id="rptGas" checked style="accent-color:var(--am);width:16px;height:16px"> 🔥 Gas
+          </label>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Units</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;font-size:calc(13px * var(--fs));color:var(--tx);cursor:pointer;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none">
+            <input type="checkbox" id="rptAllUnits" checked onchange="toggleAllUnits(this.checked)" style="accent-color:var(--am);width:16px;height:16px"> All units
+          </label>
+        </div>
+        <div id="rptUnitList" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      </div>
+      <div class="btn-row" style="display:flex;gap:10px">
+        <button class="btn btg" style="flex:1" onclick="closeM('mReport')">Cancel</button>
+        <button class="btn btp" style="flex:1" onclick="generateReport()">📄 Generate PDF</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1132,36 +1189,32 @@ function inBox(e){
 
 function cropStart(e){
   const h=getHandle(e);
+  const r=CR.canvas.getBoundingClientRect();
+  const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
   if(h){
-    const r=CR.canvas.getBoundingClientRect();
-    const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
     CR.drag={type:'handle',id:h,startN:{x:nx,y:ny},box:{...CR.box}};
   } else if(inBox(e)){
-    const r=CR.canvas.getBoundingClientRect();
-    const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
     CR.drag={type:'move',startN:{x:nx,y:ny},box:{...CR.box}};
   }
 }
 function cropMove(e){
   if(!CR.drag)return;
   const r=CR.canvas.getBoundingClientRect();
+  // Delta is always from the ORIGINAL drag-start position (not previous frame)
   const nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
   const dx=nx-CR.drag.startN.x, dy=ny-CR.drag.startN.y;
-  const ob=CR.drag.box, MIN=0.04;
+  const ob=CR.drag.box, MIN=0.06;
   if(CR.drag.type==='move'){
-    CR.box.x=Math.max(0,Math.min(1-ob.w,ob.x+dx));
-    CR.box.y=Math.max(0,Math.min(1-ob.h,ob.y+dy));
+    CR.box.x=Math.max(0,Math.min(1-ob.w, ob.x+dx));
+    CR.box.y=Math.max(0,Math.min(1-ob.h, ob.y+dy));
   } else {
-    let {x,y,w,h}={...ob};
+    let x=ob.x, y=ob.y, w=ob.w, h=ob.h;
     const id=CR.drag.id;
-    // Left edge: tl, ml, bl
-    if(id==='tl'||id==='ml'||id==='bl'){x=Math.max(0,Math.min(ob.x+ob.w-MIN,ob.x+dx));w=ob.x+ob.w-x;}
-    // Right edge: tr, mr, br
-    if(id==='tr'||id==='mr'||id==='br'){w=Math.max(MIN,Math.min(1-ob.x,ob.w+dx));}
-    // Top edge: tl, tm, tr
-    if(id==='tl'||id==='tm'||id==='tr'){y=Math.max(0,Math.min(ob.y+ob.h-MIN,ob.y+dy));h=ob.y+ob.h-y;}
-    // Bottom edge: bl, bm, br
-    if(id==='bl'||id==='bm'||id==='br'){h=Math.max(MIN,Math.min(1-ob.y,ob.h+dy));}
+    // Each handle modifies specific edges using the ORIGINAL box as reference
+    if(id==='tl'||id==='ml'||id==='bl'){ const nx2=Math.max(0,Math.min(ob.x+ob.w-MIN,ob.x+dx)); w=ob.x+ob.w-nx2; x=nx2; }
+    if(id==='tr'||id==='mr'||id==='br'){ w=Math.max(MIN,Math.min(1-ob.x, ob.w+dx)); }
+    if(id==='tl'||id==='tm'||id==='tr'){ const ny2=Math.max(0,Math.min(ob.y+ob.h-MIN,ob.y+dy)); h=ob.y+ob.h-ny2; y=ny2; }
+    if(id==='bl'||id==='bm'||id==='br'){ h=Math.max(MIN,Math.min(1-ob.y, ob.h+dy)); }
     CR.box={x,y,w,h};
   }
   drawCrop();
@@ -1554,8 +1607,193 @@ function exportData(){
 function clearAll(){if(!confirm('Delete ALL readings?'))return;S.readings=[];saveR();refreshAll();toast('Cleared');}
 
 // ═══════════════════════════════════════════
-//  REFRESH
+//  REPORT GENERATION
 // ═══════════════════════════════════════════
+function openReportModal(){
+  // Populate unit checkboxes
+  const el=document.getElementById('rptUnitList');
+  el.innerHTML=S.units.map(u=>`
+    <label style="display:flex;align-items:center;gap:5px;font-size:calc(12px * var(--fs));color:var(--tx2);cursor:pointer;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:4px 9px;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none">
+      <input type="checkbox" class="rptUnit" value="${u.id}" checked style="accent-color:var(--am);width:14px;height:14px"> ${u.number}
+    </label>`).join('');
+  document.getElementById('rptAllUnits').checked=true;
+  openM('mReport');
+}
+function toggleAllUnits(checked){
+  document.querySelectorAll('.rptUnit').forEach(cb=>cb.checked=checked);
+}
+
+function generateReport(){
+  const days   = document.getElementById('rptPeriod').value;
+  const elec   = document.getElementById('rptElec').checked;
+  const water  = document.getElementById('rptWater').checked;
+  const gas    = document.getElementById('rptGas').checked;
+  const unitIds= [...document.querySelectorAll('.rptUnit:checked')].map(cb=>cb.value);
+  const mTypes = MDEFS.filter(m=>(m.type==='electricity'&&elec)||(m.type==='water'&&water)||(m.type==='gas'&&gas));
+  if(!unitIds.length||!mTypes.length){toast('Select at least one unit and meter','err');return;}
+
+  const cutoff = days==='all' ? new Date(0) : (() => { const d=new Date(); d.setDate(d.getDate()-parseInt(days)); return d; })();
+  const reportDate = new Date().toLocaleDateString('en-SG',{day:'numeric',month:'long',year:'numeric'});
+  const periodLabel = days==='all' ? 'All time' : `Last ${days} days (to ${reportDate})`;
+  const units = S.units.filter(u=>unitIds.includes(u.id));
+
+  // ── build data per unit per meter ──
+  const unitData = units.map(u=>{
+    const meters = mTypes.map(md=>{
+      const all = getMR(u.id,md.type);
+      const inPeriod = all.filter(r=>new Date(r.date)>=cutoff);
+      if(inPeriod.length<2) return {md,total:null,avg:null,trend:null,readings:inPeriod};
+      const total = parseFloat(inPeriod[inPeriod.length-1].reading)-parseFloat(inPeriod[0].reading);
+      const span  = Math.max(1,dBetween(inPeriod[0].date,inPeriod[inPeriod.length-1].date));
+      const avg   = total/span;
+      // Trend vs preceding period
+      const pts=[];
+      for(let i=1;i<all.length;i++){const d=Math.max(1,dBetween(all[i-1].date,all[i].date));const c=parseFloat(all[i].reading)-parseFloat(all[i-1].reading);if(c>=0)pts.push(c/d);}
+      const tr = pts.length>=4 ? assessTrend(inPeriod.length>=5?inPeriod:all) : null;
+      return {md,total,avg,trend:tr,readings:inPeriod};
+    });
+    return {u,meters};
+  });
+
+  // ── property-level summary ──
+  const propSummary = mTypes.map(md=>{
+    let propTotal=0,propUnits=0;
+    units.forEach(u=>{
+      const m=unitData.find(d=>d.u.id===u.id)?.meters.find(m=>m.md.type===md.type);
+      if(m?.total!=null){propTotal+=m.total;propUnits++;}
+    });
+    return {md,total:propUnits>0?propTotal:null,unitCount:propUnits};
+  });
+
+  // ── generate insights ──
+  function insight(ud){
+    const issues=[],goods=[];
+    ud.meters.forEach(m=>{
+      if(!m.trend)return;
+      if(m.trend.lv==='critical')issues.push(`${m.md.icon} ${m.md.label}: ${m.trend.txt}`);
+      else if(m.trend.lv==='high')issues.push(`${m.md.icon} ${m.md.label}: elevated — ${m.trend.txt}`);
+      else if(m.trend.lv==='low')issues.push(`${m.md.icon} ${m.md.label}: unusually low — ${m.trend.txt}`);
+      else goods.push(`${m.md.icon} ${m.md.label} normal`);
+    });
+    if(!issues.length&&!goods.length)return'Insufficient data for trend assessment.';
+    let s='';
+    if(issues.length)s+=`⚠ Concerns: ${issues.join('; ')}. `;
+    if(goods.length&&!issues.length)s+=`✓ All meters within normal range.`;
+    else if(goods.length)s+=`Normal: ${goods.join(', ')}.`;
+    return s.trim();
+  }
+
+  // ── build HTML for print window ──
+  const accentColor = '#d97706';
+  const rows = unitData.map(ud=>{
+    const mCells = mTypes.map(md=>{
+      const m=ud.meters.find(x=>x.md.type===md.type);
+      if(!m||m.total==null) return `<td style="text-align:center;color:#aaa;font-size:12px">—</td><td style="text-align:center;color:#aaa;font-size:12px">—</td>`;
+      const trendColor = !m.trend?'#666':m.trend.lv==='critical'?'#dc2626':m.trend.lv==='high'?'#ca8a04':m.trend.lv==='low'?'#2563eb':'#059669';
+      const trendIcon  = !m.trend?'':m.trend.icon;
+      return `<td style="text-align:right;font-weight:600">${m.total.toFixed(md.dec)}</td><td style="text-align:center;color:${trendColor}">${trendIcon}</td>`;
+    }).join('');
+    const ins=insight(ud);
+    const insColor=ins.includes('⚠')?'#7f1d1d':ins.includes('✓')?'#052e16':'#1c1917';
+    const insBg  =ins.includes('⚠')?'#fef2f2':ins.includes('✓')?'#f0fdf4':'#fafaf9';
+    return `<tr>
+      <td style="font-weight:600;white-space:nowrap">${ud.u.number}</td>
+      <td style="color:#555;font-size:11px">${ud.u.desc||''}</td>
+      ${mCells}
+      <td style="font-size:11px;color:${insColor};background:${insBg};border-radius:4px;padding:4px 6px">${ins}</td>
+    </tr>`;
+  }).join('');
+
+  const mHeaders = mTypes.map(md=>`<th colspan="2" style="text-align:center;background:#fef9c3;border-bottom:2px solid ${accentColor}">${md.icon} ${md.label} (${md.unit})</th>`).join('');
+  const mSubHeaders = mTypes.map(()=>`<th style="text-align:right;font-size:10px;color:#666">Total</th><th style="text-align:center;font-size:10px;color:#666">Trend</th>`).join('');
+
+  const summaryRows = propSummary.map(s=>s.total!=null?`
+    <tr><td style="font-weight:600">${s.md.icon} ${s.md.label}</td>
+    <td style="text-align:right;font-weight:700;font-size:18px">${s.total.toFixed(s.md.dec)} ${s.md.unit}</td>
+    <td style="color:#666;font-size:12px">across ${s.unitCount} unit${s.unitCount!==1?'s':''}</td></tr>`:'').join('');
+
+  // Overall property insight
+  const critCount = unitData.filter(ud=>ud.meters.some(m=>m.trend?.lv==='critical')).length;
+  const highCount = unitData.filter(ud=>ud.meters.some(m=>m.trend?.lv==='high')).length;
+  const goodCount = unitData.filter(ud=>ud.meters.every(m=>!m.trend||m.trend.lv==='normal')).length;
+  let propInsight='';
+  if(critCount)propInsight+=`<span style="color:#dc2626;font-weight:600">${critCount} unit${critCount>1?'s':''} flagged critical — immediate review recommended.</span> `;
+  if(highCount)propInsight+=`<span style="color:#ca8a04">${highCount} unit${highCount>1?'s':''} showing elevated consumption.</span> `;
+  if(goodCount&&!critCount&&!highCount)propInsight+=`<span style="color:#059669">All ${goodCount} monitored units operating within normal parameters.</span>`;
+  else if(goodCount)propInsight+=`<span style="color:#059669">${goodCount} unit${goodCount>1?'s':''} normal.</span>`;
+  if(!propInsight)propInsight='<span style="color:#666">Insufficient trend data — more readings needed.</span>';
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>MetrIQ Report — ${S.prop?.name} — ${reportDate}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff;padding:28px 32px}
+    h1{font-size:22px;font-weight:700;color:${accentColor};letter-spacing:1px}
+    h2{font-size:14px;font-weight:700;color:#1a1a1a;margin:22px 0 8px;border-bottom:2px solid ${accentColor};padding-bottom:4px}
+    .meta{font-size:11px;color:#666;margin:3px 0}
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+    .scard{border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;background:#fffbeb}
+    .scard .num{font-size:22px;font-weight:700;color:${accentColor}}
+    .scard .lbl{font-size:11px;color:#666;margin-top:2px}
+    .prop-insight{background:#fffbeb;border:1.5px solid ${accentColor};border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;line-height:1.5}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+    th{background:#f9fafb;padding:7px 8px;text-align:left;border:1px solid #e5e7eb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:7px 8px;border:1px solid #f0f0f0;vertical-align:top}
+    tr:nth-child(even) td{background:#fafafa}
+    .footer{margin-top:28px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}
+    @media print{body{padding:14px 18px}button{display:none}}
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+    <div>
+      <h1>⚡ MetrIQ — Property Meter Report</h1>
+      <div class="meta"><strong>${S.prop?.icon||''} ${S.prop?.name||'Property'}</strong></div>
+      <div class="meta">Period: ${periodLabel}</div>
+      <div class="meta">Generated: ${reportDate} · Units included: ${units.length} · Meters: ${mTypes.map(m=>m.label).join(', ')}</div>
+    </div>
+    <button onclick="window.print()" style="padding:8px 18px;background:${accentColor};color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">🖨 Print / Save PDF</button>
+  </div>
+
+  <h2>Property Summary</h2>
+  <div class="prop-insight"><strong>Overall Assessment:</strong> ${propInsight}</div>
+  <div class="summary-grid">
+    ${propSummary.filter(s=>s.total!=null).map(s=>`
+    <div class="scard">
+      <div class="num">${s.total.toFixed(s.md.dec)}<span style="font-size:13px;font-weight:400;color:#888"> ${s.md.unit}</span></div>
+      <div class="lbl">${s.md.icon} ${s.md.label} · ${s.unitCount} units</div>
+    </div>`).join('')}
+  </div>
+
+  <h2>Unit Detail</h2>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Unit</th>
+        <th rowspan="2">Description</th>
+        ${mHeaders}
+        <th rowspan="2">Assessment</th>
+      </tr>
+      <tr>${mSubHeaders}</tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <h2>Trend Legend</h2>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-top:6px">
+    <span>🟢 Normal</span><span>🟡 Elevated (+30–100% above avg)</span>
+    <span>🔴 Critical (+100% above avg)</span><span>🔵 Unusually low (−40%+ below avg)</span>
+  </div>
+
+  <div class="footer">MetrIQ v10 · Smart Meter Management · Report generated ${new Date().toISOString()}</div>
+  </body></html>`;
+
+  closeM('mReport');
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),600);
+}
+
+// ── END REPORT ──
 function refreshAll(){
   updateHeader();updateUSBs();
   renderMTabs('mTabsDash','dash');renderMTabs('mTabsHist','history');renderMTabs('mTabsAnal','analytics');
