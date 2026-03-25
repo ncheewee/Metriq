@@ -303,13 +303,13 @@ select.fi option{background:var(--sf)}
     </div>
     <button class="pbk" onclick="backToProp()">← Back</button>
   </div>
-  <div class="lver">v11</div>
+  <div class="lver">v12</div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v11</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v12</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -425,7 +425,7 @@ select.fi option{background:var(--sf)}
         </div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v11 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v12 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -1132,15 +1132,10 @@ function renderStep(){
             <span style="font-size:22px;flex-shrink:0">👁️</span>
             <div><div class="cbtxt">Verify Reading</div><div class="cbsub">Compare against meter display — edit if needed</div></div>
           </div>
-          <div class="cnbox">
-            <div class="cnnum" id="cnDisp">—</div>
-            <div class="cnunit">${md.unit} · ${md.icon} ${md.label}</div>
-            <div class="extconf" id="confConf" style="margin-top:5px"></div>
-          </div>
           <div class="fg">
-            <label style="font-family:'Rajdhani',sans-serif;font-size:calc(11px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)">✏️ Confirmed Reading</label>
+            <label style="font-family:'Rajdhani',sans-serif;font-size:calc(11px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)">✏️ Confirmed Reading (${md.unit})</label>
             <input class="cinput" type="number" id="confIn" step="0.001" inputmode="decimal"
-              oninput="document.getElementById('cnDisp').textContent=this.value||'—';checkAnomaly(this.value)">
+              oninput="checkAnomaly(this.value)">
           </div>
           <div id="anomalyZone"></div>
           ${getRefCard()}
@@ -1159,15 +1154,11 @@ function renderStep(){
     } else if(cap.manualMode){
       c.innerHTML=`
         <div class="phase-lbl">Manual Entry</div>
-        <div class="cnbox">
-          <div class="cnnum" id="cnDisp">—</div>
-          <div class="cnunit">${md.unit} · ${md.icon} ${md.label}</div>
-        </div>
         <div class="fg">
-          <label style="font-family:'Rajdhani',sans-serif;font-size:calc(11px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)">Enter Reading</label>
+          <label style="font-family:'Rajdhani',sans-serif;font-size:calc(11px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)">Enter Reading (${md.unit} · ${md.icon} ${md.label})</label>
           <input class="cinput" type="number" id="confIn" step="0.001" inputmode="decimal" autofocus
             placeholder="e.g. 12345.6"
-            oninput="document.getElementById('cnDisp').textContent=this.value||'—';checkAnomaly(this.value)">
+            oninput="checkAnomaly(this.value)">
         </div>
         <div id="anomalyZone"></div>
         ${getRefCard()}
@@ -1187,17 +1178,9 @@ function showConfirmZone(){
   const eb=document.getElementById('extBox');
   const cz=document.getElementById('confirmZone');
   const ci=document.getElementById('confIn');
-  const cd=document.getElementById('cnDisp');
   if(eb) showExtRes();
-  if(cz){ cz.style.display='flex'; }
-  if(ci){ ci.value=cap.extracted||''; }
-  if(cd){ cd.textContent=cap.extracted||'—'; }
-  const cc2=document.getElementById('confConf');
-  if(cc2){
-    const cls=cap.conf==='high'?'chi':cap.conf==='medium'?'cmd':'clo';
-    const lbl=cap.conf==='high'?'✓ High confidence':cap.conf==='medium'?'~ Medium confidence':'⚠ Low confidence — verify carefully';
-    cc2.innerHTML=`<span class="${cls}">${lbl}</span>`;
-  }
+  if(cz) cz.style.display='flex';
+  if(ci) ci.value=cap.extracted||'';
   checkAnomaly(cap.extracted);
   document.getElementById('btnNext').disabled=false;
 }
@@ -1922,7 +1905,7 @@ function generateReport(){
     <span>🔵 Low — −40%+ below avg, check meter/supply</span>
   </div>
 
-  <div class="footer">MetrIQ v11 · Smart Meter Management · ${new Date().toISOString()}</div>
+  <div class="footer">MetrIQ v12 · Smart Meter Management · ${new Date().toISOString()}</div>
   </body></html>`;
 
   closeM('mReport');
