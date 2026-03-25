@@ -405,23 +405,25 @@ select.fi option{background:var(--sf)}
         <div id="gOR"     class="fg" style="display:none;margin-bottom:11px"><div class="fl">OpenRouter Key</div><input class="fi ft" type="password" id="orKey" placeholder="sk-or-…"></div>
         <div id="gGemini" class="fg" style="display:none;margin-bottom:11px"><div class="fl">Gemini API Key</div><input class="fi ft" type="password" id="gemKey" placeholder="AIza…"><div class="fhint" style="margin-top:4px">Free at <strong style="color:var(--am)">aistudio.google.com</strong>. 15/min limit.</div></div>
         <div id="gClaude" class="fg" style="display:none;margin-bottom:11px"><div class="fl">Anthropic Key</div><input class="fi ft" type="password" id="claKey" placeholder="sk-ant-…"></div>
+        <button class="btn btp wf" onclick="saveSettings()">Save Settings</button>
+      </div>
       <div class="card">
         <div class="stitle" style="margin-bottom:11px">🔔 Telegram Alerts</div>
         <div class="fg" style="margin-bottom:11px">
           <div class="fl">Bot Token</div>
           <input class="fi ft" type="password" id="tgToken" placeholder="7123456789:AAFxxx…">
-          <div class="fhint" style="margin-top:4px">Get free from <strong style="color:var(--am)">@BotFather</strong> on Telegram → /newbot</div>
+          <div class="fhint" style="margin-top:4px">From <strong style="color:var(--am)">@BotFather</strong> on Telegram → /newbot</div>
         </div>
         <div class="fg" style="margin-bottom:11px">
           <div class="fl">Your Chat ID</div>
           <input class="fi ft" type="text" id="tgChatId" placeholder="987654321" inputmode="numeric">
-          <div class="fhint" style="margin-top:4px">Get from <strong style="color:var(--am)">@userinfobot</strong> on Telegram — send any message</div>
+          <div class="fhint" style="margin-top:4px">From <strong style="color:var(--am)">@userinfobot</strong> on Telegram → send any message</div>
         </div>
-        <div class="si" style="padding-top:0;border:none">
-          <div><div class="ssub">Alerts sent for: 🔴 Critical · 🟡 Elevated</div></div>
-          <button class="btn btg" style="padding:6px 11px;font-size:12px;flex-shrink:0" onclick="testTelegram()">Test</button>
+        <div style="font-size:calc(11px * var(--fs));color:var(--tx3);margin-bottom:11px">Alerts fire on 🔴 Critical and 🟡 Elevated readings</div>
+        <div class="brow">
+          <button class="btn btg" style="flex:1" onclick="testTelegram()">Send Test</button>
+          <button class="btn btp" style="flex:1" onclick="saveTelegram()">Save</button>
         </div>
-        <button class="btn btp wf" onclick="saveSettings()">Save Settings</button>
       </div>
       <div class="card">
         <div class="stitle" style="margin-bottom:4px">Units & Meters</div>
@@ -723,7 +725,8 @@ async function loginAs(prop){
   document.getElementById('orKey').value=S.orKey;document.getElementById('gemKey').value=S.gemKey;
   document.getElementById('claKey').value=S.claKey;document.getElementById('setPropName').textContent=prop.icon+' '+prop.name;
   document.getElementById('fontSlider').value=S.fs;document.getElementById('themeToggle').classList.toggle('on',S.dark);
-  document.getElementById('tgToken').value=S.tgToken;document.getElementById('tgChatId').value=S.tgChatId;
+  document.getElementById('tgToken').value=S.tgToken||'';
+  document.getElementById('tgChatId').value=S.tgChatId||'';
   onProvChange();
   document.getElementById('loginScreen').classList.add('hidden');
   setTimeout(()=>document.getElementById('loginScreen').style.display='none',350);
@@ -1569,39 +1572,10 @@ function showExtErr(msg){
   cap.extracted='0';cap.conf='low';document.getElementById('btnNext').disabled=false;
 }
 
-// ═══════════════════════════════════════════
-//  TELEGRAM ALERTS
-// ═══════════════════════════════════════════
-async function sendTelegramAlert(msg){
-  if(!S.tgToken||!S.tgChatId)return;
-  try{
-    await fetch(`https://api.telegram.org/bot${S.tgToken}/sendMessage`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:S.tgChatId,text:msg,parse_mode:'HTML'})
-    });
-  }catch(e){console.warn('Telegram alert failed:',e);}
-}
-
-async function testTelegram(){
-  const tok=document.getElementById('tgToken').value.trim();
-  const cid=document.getElementById('tgChatId').value.trim();
-  if(!tok||!cid){toast('Enter token and chat ID first','err');return;}
-  toast('Sending test…');
-  try{
-    const res=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:cid,text:'⚡ <b>MetrIQ</b> — Test alert successful!\nAlerts are working correctly.',parse_mode:'HTML'})
-    });
-    const d=await res.json();
-    if(d.ok)toast('✓ Telegram message sent!','ok');
-    else toast('Failed: '+d.description,'err');
-  }catch(e){toast('Network error — check token/ID','err');}
-}
-
 async function saveReading(){
   const date=document.getElementById('rDate').value,time=document.getElementById('rTime').value,notes=document.getElementById('rNotes')?.value.trim()||'';
   if(!date||!time){toast('Date and time required','err');return;}
+  // Compress photo to thumbnail for storage
   const photoThumb=await compressForStorage(cap.croppedPhoto||cap.photo);
   const r={id:'r_'+Date.now(),propId:S.prop.id,unitId:cap.uid,meterType:cap.mt,reading:cap.confirmed,
     date,time,notes,photoData:photoThumb,aiConf:cap.conf,savedAt:new Date().toISOString()};
@@ -1611,21 +1585,21 @@ async function saveReading(){
   const prev=allR.length>=2?allR[allR.length-2]:null;
   const cons=prev?(parseFloat(r.reading)-parseFloat(prev.reading)).toFixed(md.dec):null;
   const days=prev?Math.round(dBetween(prev.date,r.date)):null;
-  const unit=S.units.find(u=>u.id===cap.uid);
   document.getElementById('assessContent').innerHTML=`<div class="anum">${fNum(r.reading,md.dec)}</div>
     <div class="acons">${md.unit} · ${md.icon} ${md.label}${cons!==null?` · +${cons} over ${days}d`:''}</div>
     ${tr?`<div class="tbadge ${tr.cls}"><div class="tico">${tr.icon}</div><div><strong>${tr.lbl}</strong><br><span style="font-weight:400;font-size:calc(11px * var(--fs))">${tr.txt}</span></div></div>`:`<div style="color:var(--tx2);font-size:calc(13px * var(--fs));padding:8px 0">✓ Saved. Trend analysis available after 5+ readings.</div>`}`;
   toast('✓ Reading saved!','ok');go('dash');setTimeout(()=>openM('mAssess'),300);
-  // Send Telegram alert for critical or high anomalies
+  // Fire Telegram alert for critical or high anomalies
   if(tr&&(tr.lv==='critical'||tr.lv==='high')){
-    const propName=S.prop?.name||'Property';
-    const unitNum=unit?.number||'';
+    const u=S.units.find(x=>x.id===cap.uid);
     const emoji=tr.lv==='critical'?'🔴':'🟡';
-    const msg=`${emoji} <b>MetrIQ Alert — ${propName}</b>\n`+
-      `<b>${unitNum}</b> · ${md.icon} ${md.label}\n\n`+
+    const msg=`${emoji} <b>MetrIQ — ${S.prop?.name||''}</b>\n`+
+      `Unit: <b>${u?.number||''}</b> ${u?.desc?'· '+u.desc:''}\n`+
+      `Meter: ${md.icon} ${md.label}\n\n`+
       `<b>${tr.lbl}</b>\n${tr.txt}\n\n`+
-      `Reading: <b>${fNum(r.reading,md.dec)} ${md.unit}</b>${cons!==null?`\nConsumption: +${cons} ${md.unit} over ${days}d`:''}\n`+
-      `Saved: ${fDate(r.date)} ${r.time}`;
+      `Reading: <b>${fNum(r.reading,md.dec)} ${md.unit}</b>`+
+      (cons!==null?`\nConsumption: +${cons} ${md.unit} over ${days}d`:'')+
+      `\nSaved: ${fDate(r.date)} ${r.time}`;
     sendTelegramAlert(msg);
   }
 }
@@ -1732,10 +1706,38 @@ function onProvChange(){
 function saveSettings(){
   S.aiProv=document.getElementById('aiProv').value;S.groqKey=document.getElementById('groqKey').value.trim();
   S.orKey=document.getElementById('orKey').value.trim();S.gemKey=document.getElementById('gemKey').value.trim();S.claKey=document.getElementById('claKey').value.trim();
-  S.tgToken=document.getElementById('tgToken').value.trim();S.tgChatId=document.getElementById('tgChatId').value.trim();
   DB.set('aiProv',S.aiProv);DB.set('groqKey',S.groqKey);DB.set('orKey',S.orKey);DB.set('gemKey',S.gemKey);DB.set('claKey',S.claKey);
-  DB.set('tgToken',S.tgToken);DB.set('tgChatId',S.tgChatId);
   toast('✓ Settings saved','ok');
+}
+function saveTelegram(){
+  S.tgToken=document.getElementById('tgToken').value.trim();
+  S.tgChatId=document.getElementById('tgChatId').value.trim();
+  DB.set('tgToken',S.tgToken);DB.set('tgChatId',S.tgChatId);
+  toast('✓ Telegram settings saved','ok');
+}
+async function testTelegram(){
+  const tok=document.getElementById('tgToken').value.trim();
+  const cid=document.getElementById('tgChatId').value.trim();
+  if(!tok||!cid){toast('Enter token and chat ID first','err');return;}
+  toast('Sending…');
+  try{
+    const res=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:cid,text:'⚡ <b>MetrIQ</b> — Test alert!\nYour alerts are working correctly.',parse_mode:'HTML'})
+    });
+    const d=await res.json();
+    if(d.ok)toast('✓ Message sent! Check Telegram','ok');
+    else toast('Failed: '+d.description,'err');
+  }catch(e){toast('Network error','err');}
+}
+async function sendTelegramAlert(msg){
+  if(!S.tgToken||!S.tgChatId)return;
+  try{
+    await fetch(`https://api.telegram.org/bot${S.tgToken}/sendMessage`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:S.tgChatId,text:msg,parse_mode:'HTML'})
+    });
+  }catch(e){console.warn('Telegram alert failed:',e);}
 }
 function exportData(){
   const d={property:S.prop?.name,units:S.units,readings:S.readings.map(r=>({...r,photoData:undefined})),exported:new Date().toISOString()};
