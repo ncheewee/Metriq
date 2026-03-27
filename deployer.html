@@ -1,0 +1,368 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0c0c0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MetrIQ Deploy">
+<title>MetrIQ Deployer</title>
+<style>
+:root{--bg:#0c0c0f;--sf:#141418;--sf2:#1c1c22;--bd:#2a2a38;--am:#f59e0b;--amg:rgba(245,158,11,.15);--gn:#10b981;--gnd:rgba(16,185,129,.15);--rd:#ef4444;--rdd:rgba(239,68,68,.15);--bl:#3b82f6;--bld:rgba(59,130,246,.15);--tx:#e0e0ea;--tx2:#8888a0;--tx3:#555568}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px}
+.logo{font-family:monospace;font-size:22px;font-weight:700;color:var(--am);letter-spacing:2px;text-align:center}
+.sub{font-size:12px;color:var(--tx3);text-align:center;letter-spacing:1px;text-transform:uppercase;margin-top:-8px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:11px}
+.card-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--tx3)}
+label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);display:block;margin-bottom:4px}
+input,select{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px 13px;color:var(--tx);font-size:14px;outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--am)}
+select option{background:var(--sf2)}
+.hint{font-size:11px;color:var(--tx3);margin-top:3px}
+.hint a{color:var(--am);text-decoration:none}
+.drop-area{border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.drop-area:hover,.drop-area.over{border-color:var(--am);background:var(--amg)}
+.drop-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:28px;margin-bottom:6px}
+.drop-text{font-size:14px;color:var(--tx2)}
+.drop-text strong{color:var(--am)}
+.file-ready{display:flex;align-items:center;gap:10px;background:var(--sf2);border-radius:8px;padding:10px 13px}
+.file-name{font-size:13px;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-size{font-size:11px;color:var(--tx3);flex-shrink:0;font-family:monospace}
+.clear-btn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px;padding:2px 6px}
+.deploy-btn{width:100%;padding:13px;background:var(--am);color:#000;border:none;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:opacity .15s,transform .1s;text-transform:uppercase}
+.deploy-btn:active{opacity:.85;transform:scale(.98)}
+.deploy-btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-sec{padding:11px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-sec:hover{border-color:var(--am);color:var(--am)}
+.btn-sec:disabled{opacity:.4;cursor:default}
+.status{border-radius:10px;padding:13px 15px;font-size:13px;display:none}
+.status.show{display:block}
+.status.loading{background:var(--sf2);border:1px solid var(--bd);color:var(--tx2)}
+.status.success{background:var(--gnd);border:1px solid var(--gn);color:var(--gn)}
+.status.error{background:var(--rdd);border:1px solid var(--rd);color:var(--rd)}
+.progress-bar{height:3px;background:var(--bd);border-radius:2px;margin-top:9px;overflow:hidden}
+.progress-fill{height:100%;background:var(--am);width:0%;transition:width .4s ease;border-radius:2px}
+.steps{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx3)}
+.step.done{color:var(--gn)}.step.active{color:var(--am)}.step.err{color:var(--rd)}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--bd);flex-shrink:0}
+.step.done .step-dot{background:var(--gn)}.step.active .step-dot{background:var(--am);box-shadow:0 0 6px var(--am)}.step.err .step-dot{background:var(--rd)}
+.live-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:var(--am);color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none}
+.toggle-token{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:11px;text-decoration:underline;margin-top:2px;padding:0}
+.saved-badge{display:inline-flex;align-items:center;gap:4px;background:var(--gnd);border:1px solid var(--gn);color:var(--gn);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;letter-spacing:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.install-banner{display:none;align-items:center;gap:10px;background:var(--bld);border:1px solid var(--bl);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--bl)}
+.install-banner.show{display:flex}
+.install-btn{margin-left:auto;padding:6px 14px;background:var(--bl);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.url-box{font-size:11px;color:var(--am);word-break:break-all;padding:8px 10px;background:var(--sf2);border-radius:6px;border:1px solid var(--bd);display:none}
+.url-box.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">⚡ MetrIQ Deployer</div>
+  <div class="sub">GitHub Pages · One-click deploy</div>
+
+  <!-- PWA INSTALL BANNER -->
+  <div class="install-banner" id="installBanner">
+    <div>📲 <strong>Install as app</strong> — skip the file next time</div>
+    <button class="install-btn" onclick="installPWA()">Install</button>
+  </div>
+
+  <!-- GITHUB CONFIG -->
+  <div class="card">
+    <div class="card-title">GitHub Settings <span id="savedBadge" style="" class="saved-badge">✓ SAVED</span></div>
+    <div>
+      <label>Personal Access Token</label>
+      <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="saveConfig()">
+      <div class="hint">
+        <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=MetrIQ+Deployer" target="_blank">github.com/settings/tokens</a>
+        → Generate new token (classic) → tick <strong style="color:var(--am)">repo</strong>
+        <br><button class="toggle-token" onclick="toggleToken()">Show / hide</button>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>GitHub Username</label><input type="text" id="owner" placeholder="e.g. ncheewee" oninput="saveConfig();updateURL()"></div>
+      <div><label>Repository Name</label><input type="text" id="repo" placeholder="e.g. metriq" oninput="saveConfig();updateURL()"></div>
+    </div>
+    <div><label>Branch</label><input type="text" id="branch" placeholder="main" value="main" oninput="saveConfig()"></div>
+    <div><label>Deploy Path</label><input type="text" id="filepath" placeholder="index.html" value="index.html" oninput="saveConfig()"></div>
+    <div id="previewURL" style="font-size:11px;color:var(--tx3)">→ ncheewee.github.io/Metriq/index.html</div>
+  </div>
+
+  <!-- FILE PICKER -->
+  <div class="card">
+    <div class="card-title">File to Deploy</div>
+    <div class="drop-area" id="dropArea">
+      <input type="file" id="fileInput" accept=".html,.htm" onchange="handleFile(this.files[0])">
+      <div id="dropContent">
+      <div class="file-ready">
+        <span style="font-size:20px">📄</span>
+        <div class="file-name">metriq-v14.html</div>
+        <div class="file-size">126 KB</div>
+        <button class="clear-btn" onclick="clearFile(event)">✕</button>
+      </div></div>
+    </div>
+  </div>
+
+  <button class="deploy-btn" id="deployBtn" onclick="deploy()">🚀 Deploy to GitHub Pages</button>
+
+  <!-- MAKE DEPLOYER PERMANENT -->
+  <div class="card">
+    <div class="card-title">📌 Make Deployer Permanent</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.5">Upload this deployer to your repo so it lives at a permanent URL. Bookmark it — never open from Downloads again.</div>
+    <div class="url-box show" id="deployerURL">https://ncheewee.github.io/Metriq/deployer.html</div>
+    <div class="btn-row">
+      <button class="btn-sec" id="selfDeployBtn" onclick="selfDeploy()" disabled="">Uploading…</button>
+      <button class="btn-sec" id="copyBtn" onclick="copyURL()" data-url="https://ncheewee.github.io/Metriq/deployer.html">📋 Copy URL</button>
+    </div>
+    <div style="font-size:11px;color:var(--tx3)">Saves as <code style="color:var(--am)">deployer.html</code> · Then bookmark the URL above</div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status show loading" id="status">
+    <div id="statusMsg">Uploading deployer to GitHub Pages…</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 0%;"></div></div>
+    <div class="steps" id="stepsList"><div class="step active" id="sd1"><div class="step-dot"></div><span>Uploading deployer.html → ncheewee/Metriq</span></div></div>
+    <div id="liveLink"></div>
+  </div>
+</div>
+
+<script>
+let selectedFile=null, fileContent=null, deferredPrompt=null;
+
+// ── PWA ──
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('installBanner').classList.add('show');
+});
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('installBanner').classList.remove('show');
+  deferredPrompt=null;
+});
+async function installPWA(){
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted')document.getElementById('installBanner').classList.remove('show');
+}
+// Service worker — only registers on HTTPS (i.e. after self-deploy to GitHub Pages)
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  const sw=`const V='mqd1';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.add(location.pathname)));self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))));});
+self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match(e.request))));});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+}
+
+// ── CONFIG ──
+function loadConfig(){
+  const c=JSON.parse(localStorage.getItem('mdeployer')||'{}');
+  if(c.token)   document.getElementById('token').value=c.token;
+  if(c.owner)   document.getElementById('owner').value=c.owner;
+  if(c.repo)    document.getElementById('repo').value=c.repo;
+  if(c.branch)  document.getElementById('branch').value=c.branch||'main';
+  if(c.filepath)document.getElementById('filepath').value=c.filepath||'index.html';
+  if(c.token||c.owner||c.repo)document.getElementById('savedBadge').style.display='';
+  updateURL(); checkReady();
+}
+function saveConfig(){
+  localStorage.setItem('mdeployer',JSON.stringify({
+    token:   document.getElementById('token').value.trim(),
+    owner:   document.getElementById('owner').value.trim(),
+    repo:    document.getElementById('repo').value.trim(),
+    branch:  document.getElementById('branch').value.trim()||'main',
+    filepath:document.getElementById('filepath').value.trim()||'index.html',
+  }));
+  document.getElementById('savedBadge').style.display='';
+  checkReady(); updateURL();
+}
+function updateURL(){
+  const o=document.getElementById('owner').value.trim();
+  const r=document.getElementById('repo').value.trim();
+  const p=document.getElementById('filepath').value.trim()||'index.html';
+  document.getElementById('previewURL').textContent=o&&r?`→ ${o}.github.io/${r}/${p}`:'';
+  // Deployer permanent URL
+  const ub=document.getElementById('deployerURL');
+  const cb=document.getElementById('copyBtn');
+  if(o&&r){
+    const url=`https://${o}.github.io/${r}/deployer.html`;
+    ub.textContent=url; ub.classList.add('show');
+    cb.disabled=false; cb.dataset.url=url;
+  } else {
+    ub.classList.remove('show'); cb.disabled=true;
+  }
+}
+function toggleToken(){const t=document.getElementById('token');t.type=t.type==='password'?'text':'password';}
+function copyURL(){
+  const url=document.getElementById('copyBtn').dataset.url;
+  if(!url)return;
+  navigator.clipboard.writeText(url).then(()=>showToast('✓ URL copied to clipboard'));
+}
+function showToast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c1c22;border:1px solid #3a3a4a;color:#e0e0ea;padding:9px 18px;border-radius:9px;font-size:13px;z-index:999;white-space:nowrap';
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2400);
+}
+
+// ── FILE ──
+function handleFile(file){
+  if(!file)return;
+  selectedFile=file;
+  const r=new FileReader();
+  r.onload=e=>{
+    fileContent=e.target.result;
+    document.getElementById('dropContent').innerHTML=`
+      <div class="file-ready">
+        <span style="font-size:20px">📄</span>
+        <div class="file-name">${file.name}</div>
+        <div class="file-size">${(file.size/1024).toFixed(0)} KB</div>
+        <button class="clear-btn" onclick="clearFile(event)">✕</button>
+      </div>`;
+    checkReady();
+  };
+  r.readAsText(file,'UTF-8');
+}
+function clearFile(e){
+  e.stopPropagation();selectedFile=null;fileContent=null;
+  document.getElementById('fileInput').value='';
+  document.getElementById('dropContent').innerHTML=`<div class="drop-icon">📄</div><div class="drop-text">Tap to select or <strong>drag & drop</strong> your HTML file</div>`;
+  checkReady();
+}
+const da=document.getElementById('dropArea');
+da.addEventListener('dragover',e=>{e.preventDefault();da.classList.add('over');});
+da.addEventListener('dragleave',()=>da.classList.remove('over'));
+da.addEventListener('drop',e=>{
+  e.preventDefault();da.classList.remove('over');
+  const f=e.dataTransfer.files[0];
+  if(f&&(f.name.endsWith('.html')||f.name.endsWith('.htm'))){document.getElementById('fileInput').files=e.dataTransfer.files;handleFile(f);}
+  else setStatus('error','Please drop an HTML file');
+});
+function checkReady(){
+  document.getElementById('deployBtn').disabled=!(fileContent&&document.getElementById('token').value.trim()&&document.getElementById('owner').value.trim()&&document.getElementById('repo').value.trim());
+}
+
+// ── GITHUB API ──
+function ghHeaders(token){
+  return{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+}
+async function ghPut(token,owner,repo,branch,path,content,commitMsg){
+  const api=`https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const h=ghHeaders(token);
+  let sha=null;
+  const get=await fetch(api,{headers:h});
+  if(get.ok){sha=(await get.json()).sha;}
+  else if(get.status!==404){throw new Error(`Read failed (${get.status})`);}
+  const put=await fetch(api,{method:'PUT',headers:h,body:JSON.stringify({message:commitMsg,content:btoa(unescape(encodeURIComponent(content))),branch,...(sha?{sha}:{})})});
+  if(!put.ok){const d=await put.json();throw new Error(d.message||`Upload failed (${put.status})`);}
+}
+
+// ── DEPLOY MetrIQ ──
+async function deploy(){
+  const token=document.getElementById('token').value.trim();
+  const owner=document.getElementById('owner').value.trim();
+  const repo=document.getElementById('repo').value.trim();
+  const branch=document.getElementById('branch').value.trim()||'main';
+  const filepath=document.getElementById('filepath').value.trim()||'index.html';
+  if(!token||!owner||!repo||!fileContent){setStatus('error','Fill in all fields and select a file');return;}
+
+  document.getElementById('deployBtn').disabled=true;
+  setStatus('loading','Deploying…');setProgress(0);
+  renderSteps([
+    {id:'s1',label:'Authenticating with GitHub'},
+    {id:'s2',label:'Fetching current file SHA'},
+    {id:'s3',label:`Uploading → ${filepath}`},
+    {id:'s4',label:'Complete'},
+  ]);
+  try{
+    stepState('s1','active');
+    const ur=await fetch('https://api.github.com/user',{headers:ghHeaders(token)});
+    if(!ur.ok)throw new Error(`Auth failed (${ur.status}) — check your token`);
+    stepState('s1','done',`✓ Signed in as ${(await ur.json()).login}`);setProgress(25);
+
+    stepState('s2','active');
+    const api=`https://api.github.com/repos/${owner}/${repo}/contents/${filepath}`;
+    const get=await fetch(api,{headers:ghHeaders(token)});
+    let sha=null;
+    if(get.ok){sha=(await get.json()).sha;stepState('s2','done','✓ Will update existing file');}
+    else if(get.status===404)stepState('s2','done','✓ New file — will create');
+    else throw new Error(`Cannot read repo (${get.status})`);
+    setProgress(50);
+
+    stepState('s3','active');
+    const put=await fetch(api,{method:'PUT',headers:ghHeaders(token),body:JSON.stringify({message:`Deploy ${selectedFile?.name} — ${new Date().toLocaleString('en-SG')}`,content:btoa(unescape(encodeURIComponent(fileContent))),branch,...(sha?{sha}:{})})});
+    if(!put.ok){const d=await put.json();throw new Error(d.message||`Upload failed (${put.status})`);}
+    stepState('s3','done',`✓ ${selectedFile?.name} uploaded`);setProgress(85);
+
+    stepState('s4','active');
+    await new Promise(r=>setTimeout(r,700));
+    stepState('s4','done','✓ GitHub Pages updating in ~30s');setProgress(100);
+
+    const liveURL=`https://${owner}.github.io/${repo}`;
+    document.getElementById('statusMsg').textContent='🎉 Deployed!';
+    document.getElementById('liveLink').innerHTML=`<a class="live-link" href="${liveURL}" target="_blank">🌐 Open Live Site</a>`;
+    document.getElementById('status').className='status show success';
+  }catch(err){
+    setStatus('error','❌ '+err.message);
+    document.querySelectorAll('.step.active').forEach(s=>{s.className='step err';s.querySelector('.step-dot').style.background='var(--rd)';});
+  }
+  document.getElementById('deployBtn').disabled=false;
+}
+
+// ── SELF-DEPLOY ──
+async function selfDeploy(){
+  const token=document.getElementById('token').value.trim();
+  const owner=document.getElementById('owner').value.trim();
+  const repo=document.getElementById('repo').value.trim();
+  const branch=document.getElementById('branch').value.trim()||'main';
+  if(!token||!owner||!repo){setStatus('error','Fill in GitHub settings first');return;}
+
+  const btn=document.getElementById('selfDeployBtn');
+  btn.disabled=true;btn.textContent='Uploading…';
+  setStatus('loading','Uploading deployer to GitHub Pages…');
+  setProgress(0);renderSteps([{id:'sd1',label:`Uploading deployer.html → ${owner}/${repo}`}]);
+  stepState('sd1','active');
+
+  try{
+    const html=document.documentElement.outerHTML;
+    await ghPut(token,owner,repo,branch,'deployer.html',html,`Deploy MetrIQ Deployer — ${new Date().toLocaleString('en-SG')}`);
+    stepState('sd1','done','✓ deployer.html uploaded');setProgress(100);
+
+    const url=`https://${owner}.github.io/${repo}/deployer.html`;
+    document.getElementById('statusMsg').textContent='🎉 Deployer is now permanent!';
+    document.getElementById('liveLink').innerHTML=
+      `<a class="live-link" href="${url}" target="_blank">📌 Open & Bookmark This URL</a>
+       <div style="margin-top:8px;font-size:12px;color:var(--gn);line-height:1.5">
+         Bookmark that URL in Chrome. Next time you visit it, Chrome will offer to <strong>install it as an app</strong> on your home screen — no file needed ever again.
+       </div>`;
+    document.getElementById('status').className='status show success';
+    // Update the URL box
+    document.getElementById('deployerURL').textContent=url;
+    document.getElementById('deployerURL').classList.add('show');
+    document.getElementById('copyBtn').disabled=false;
+    document.getElementById('copyBtn').dataset.url=url;
+  }catch(err){
+    setStatus('error','❌ '+err.message);
+    document.querySelectorAll('.step.active').forEach(s=>{s.className='step err';s.querySelector('.step-dot').style.background='var(--rd)';});
+  }
+  btn.disabled=false;btn.textContent='📤 Upload Deployer';
+}
+
+// ── UI ──
+function setStatus(type,msg){
+  document.getElementById('status').className=`status show ${type}`;
+  document.getElementById('statusMsg').textContent=msg;
+  document.getElementById('liveLink').innerHTML='';
+}
+function setProgress(pct){document.getElementById('progressFill').style.width=pct+'%';}
+function renderSteps(steps){document.getElementById('stepsList').innerHTML=steps.map(s=>`<div class="step" id="${s.id}"><div class="step-dot"></div><span>${s.label}</span></div>`).join('');}
+function stepState(id,state,label){const el=document.getElementById(id);if(!el)return;el.className=`step ${state}`;if(label)el.querySelector('span').textContent=label;}
+
+loadConfig();
+</script>
+
+
+</body></html>
