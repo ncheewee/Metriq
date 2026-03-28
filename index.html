@@ -303,13 +303,13 @@ select.fi option{background:var(--sf)}
     </div>
     <button class="pbk" onclick="backToProp()">← Back</button>
   </div>
-  <div class="lver">v14</div>
+  <div class="lver">v15</div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v14</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v15</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -443,7 +443,7 @@ select.fi option{background:var(--sf)}
         </div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v14 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v15 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -1719,33 +1719,28 @@ async function testTelegram(){
   const tok=document.getElementById('tgToken').value.trim();
   const cid=document.getElementById('tgChatId').value.trim();
   if(!tok||!cid){toast('Enter token and chat ID first','err');return;}
-  // file:// blocks cross-origin fetch on Android Chrome
-  if(location.protocol==='file:'){
-    toast('Deploy to GitHub Pages first — file:// blocks network calls','err');
-    return;
-  }
   toast('Sending…');
   try{
-    const res=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:cid,text:'⚡ <b>MetrIQ</b> — Test alert!\nYour Telegram alerts are working.',parse_mode:'HTML'})
-    });
+    const url=`https://api.telegram.org/bot${tok}/sendMessage?`+
+      `chat_id=${encodeURIComponent(cid)}`+
+      `&text=${encodeURIComponent('⚡ MetrIQ — Test alert!\nYour Telegram alerts are working ✓')}`+
+      `&parse_mode=HTML`;
+    const res=await fetch(url);
     const d=await res.json();
     if(d.ok)toast('✓ Message sent! Check Telegram','ok');
     else if(d.error_code===401)toast('Invalid token — check @BotFather','err');
-    else if(d.error_code===400)toast('Bad chat ID — or send /start to your bot first','err');
-    else toast('Telegram error: '+d.description,'err');
-  }catch(e){
-    toast('Network error — are you on HTTPS?','err');
-  }
+    else if(d.error_code===400)toast('Bad chat ID — send /start to your bot first','err');
+    else toast('Telegram: '+d.description,'err');
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 async function sendTelegramAlert(msg){
   if(!S.tgToken||!S.tgChatId)return;
   try{
-    await fetch(`https://api.telegram.org/bot${S.tgToken}/sendMessage`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:S.tgChatId,text:msg,parse_mode:'HTML'})
-    });
+    const url=`https://api.telegram.org/bot${S.tgToken}/sendMessage?`+
+      `chat_id=${encodeURIComponent(S.tgChatId)}`+
+      `&text=${encodeURIComponent(msg)}`+
+      `&parse_mode=HTML`;
+    await fetch(url);
   }catch(e){console.warn('Telegram alert failed:',e);}
 }
 function exportData(){
@@ -1980,7 +1975,7 @@ function generateReport(){
     <span>🔵 Low — −40%+ below avg, check meter/supply</span>
   </div>
 
-  <div class="footer">MetrIQ v14 · Smart Meter Management · ${new Date().toISOString()}</div>
+  <div class="footer">MetrIQ v15 · Smart Meter Management · ${new Date().toISOString()}</div>
   </body></html>`;
 
   closeM('mReport');
