@@ -274,7 +274,29 @@ select.fi option{background:var(--sf)}
 .anum{font-family:'Share Tech Mono',monospace;font-size:calc(36px * var(--fs));color:var(--num);text-align:center;letter-spacing:3px;padding:14px 0 4px}
 .acons{text-align:center;font-size:calc(13px * var(--fs));color:var(--tx2);margin-bottom:14px}
 
-/* ── TOAST ── */
+/* ── ANALYTICS REDESIGN ── */
+.anl-scope{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.anl-scope-btn{padding:9px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);font-family:'Rajdhani',sans-serif;font-size:calc(13px * var(--fs));font-weight:600;color:var(--tx2);cursor:pointer;transition:all .15s;text-align:center}
+.anl-scope-btn.active{background:var(--amg);border-color:var(--am);color:var(--am)}
+.anl-period{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.anl-period .ptab{padding:5px 12px;border-radius:5px;border:1px solid var(--bd);background:none;font-family:'Rajdhani',sans-serif;font-size:calc(12px * var(--fs));font-weight:600;color:var(--tx3);cursor:pointer;transition:all .15s}
+.anl-period .ptab.active{background:var(--amg);border-color:var(--am);color:var(--am)}
+.anl-period .yr-nav{background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;padding:2px 6px}
+.anl-period .yr-nav:active{color:var(--am)}
+.ytd-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:13px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ytd-cell{display:flex;flex-direction:column;gap:2px}
+.ytd-lbl{font-family:'Rajdhani',sans-serif;font-size:calc(10px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)}
+.ytd-val{font-family:'Share Tech Mono',monospace;font-size:calc(22px * var(--fs));color:var(--num);line-height:1.1}
+.ytd-sub{font-size:calc(11px * var(--fs));color:var(--tx2)}
+.ytd-proj{grid-column:1/-1;margin-top:4px;padding-top:9px;border-top:1px solid var(--bd);font-size:calc(12px * var(--fs));color:var(--tx2);line-height:1.5}
+.ytd-proj strong{color:var(--am)}
+/* alert config checkboxes */
+.alert-opts{display:flex;flex-direction:column;gap:8px}
+.alert-opt{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer}
+.alert-opt:last-child{border-bottom:none}
+.alert-opt input[type=checkbox]{width:18px;height:18px;accent-color:var(--am);cursor:pointer;flex-shrink:0}
+.alert-opt-lbl{font-size:calc(13px * var(--fs));color:var(--tx);flex:1}
+.alert-opt-sub{font-size:calc(11px * var(--fs));color:var(--tx3)}
 #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:8px 16px;font-size:calc(13px * var(--fs));z-index:600;transition:transform .28s ease;white-space:nowrap;max-width:88vw;text-align:center}
 #toast.show{transform:translateX(-50%) translateY(0)}
 #toast.ok{border-color:var(--gn);color:var(--gn)}
@@ -303,13 +325,13 @@ select.fi option{background:var(--sf)}
     </div>
     <button class="pbk" onclick="backToProp()">← Back</button>
   </div>
-  <div class="lver">v15</div>
+  <div class="lver">v16</div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
   <div id="hdr">
-    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v15</span></div>
+    <div class="logo">⚡ MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:calc(9px * var(--fs));font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">v16</span></div>
     <div class="hc">
       <div class="hp" id="hdrProp"></div>
       <div class="hu" id="hdrUnit"></div>
@@ -366,22 +388,49 @@ select.fi option{background:var(--sf)}
 
     <!-- ANALYTICS -->
     <div class="screen" id="screen-analytics">
-      <button class="usb" onclick="openUnitPicker()">
-        <div class="usb-ico">🏢</div>
-        <div style="flex:1;min-width:0"><div class="usb-num" id="usbNA">Select unit…</div><div class="usb-desc" id="usbDA">Tap to choose</div></div>
-        <div class="usb-meta"><div class="usb-arr">▾</div></div>
-      </button>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="mtabs" id="mTabsAnal" style="flex:1"></div>
-        <div class="prow">
-          <button class="pbtn2 active" data-p="7"  onclick="setPeriod(7)">7D</button>
-          <button class="pbtn2"        data-p="30" onclick="setPeriod(30)">30D</button>
-          <button class="pbtn2"        data-p="90" onclick="setPeriod(90)">90D</button>
-        </div>
+      <!-- Scope: Building or Unit -->
+      <div class="anl-scope">
+        <button class="anl-scope-btn active" id="anlScopeBuilding" onclick="setAnlScope('building')">🏢 Whole Building</button>
+        <button class="anl-scope-btn"        id="anlScopeUnit"     onclick="setAnlScope('unit')">📍 Single Unit</button>
       </div>
-      <div class="card"><div class="clbl">Trend</div><div class="cw" style="height:180px;margin-top:6px"><canvas id="trendChart"></canvas></div></div>
-      <div class="card"><div class="clbl">Insights</div><div class="irow" id="insightRows"></div></div>
-      <div class="card"><div class="clbl">Monthly</div><div class="cw" style="margin-top:6px"><canvas id="barChart"></canvas></div></div>
+      <!-- Unit picker row (hidden for building) -->
+      <div id="anlUnitRow" style="display:none">
+        <button class="usb" onclick="openUnitPicker()">
+          <div class="usb-ico">🏢</div>
+          <div style="flex:1;min-width:0"><div class="usb-num" id="usbNA">Select unit…</div><div class="usb-desc" id="usbDA">Tap to choose</div></div>
+          <div class="usb-meta"><div class="usb-arr">▾</div></div>
+        </button>
+      </div>
+      <!-- Period + meter type -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="anl-period">
+          <button class="yr-nav" onclick="shiftAnlYear(-1)">‹</button>
+          <button class="ptab active" id="anlCY" onclick="setAnlPeriod('CY')">CY <span id="anlYrLbl">2026</span></button>
+          <button class="ptab"        id="anlFY" onclick="setAnlPeriod('FY')">FY <span id="anlFYLbl">25/26</span></button>
+          <button class="yr-nav" onclick="shiftAnlYear(1)">›</button>
+        </div>
+        <div class="mtabs" id="mTabsAnal" style="flex:1"></div>
+      </div>
+      <!-- YTD summary -->
+      <div class="ytd-card" id="ytdCard"></div>
+      <!-- Main chart: monthly actuals + prediction -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="clbl">Monthly Consumption & Forecast</div>
+          <div style="display:flex;gap:8px;font-size:calc(10px * var(--fs));color:var(--tx3)">
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(245,158,11,.4);border-radius:2px;display:inline-block"></span>Actual</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:2px;background:#f59e0b;display:inline-block;border-top:2px dashed #f59e0b"></span>Forecast</span>
+          </div>
+        </div>
+        <div class="cw" style="height:220px"><canvas id="anlMainChart"></canvas></div>
+      </div>
+      <!-- Insights -->
+      <div class="card"><div class="clbl" style="margin-bottom:8px">AI Insights</div><div id="anlInsights"></div></div>
+      <!-- Multi-year chart (building scope only) -->
+      <div class="card" id="anlMultiYearCard" style="display:none">
+        <div class="clbl" style="margin-bottom:8px">Multi-Year Comparison</div>
+        <div class="cw" style="height:180px"><canvas id="anlMultiChart"></canvas></div>
+      </div>
     </div>
 
     <!-- SETTINGS -->
@@ -419,8 +468,16 @@ select.fi option{background:var(--sf)}
           <input class="fi ft" type="text" id="tgChatId" placeholder="987654321" inputmode="numeric">
           <div class="fhint" style="margin-top:4px">From <strong style="color:var(--am)">@userinfobot</strong> on Telegram → send any message</div>
         </div>
-        <div style="font-size:calc(11px * var(--fs));color:var(--tx3);margin-bottom:11px">Alerts fire on 🔴 Critical and 🟡 Elevated readings</div>
-        <div class="brow">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:calc(11px * var(--fs));font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin-bottom:9px">Alert Triggers</div>
+        <div class="alert-opts">
+          <label class="alert-opt"><input type="checkbox" id="acOnSave"><div><div class="alert-opt-lbl">Every reading saved</div><div class="alert-opt-sub">Informational — sent for all readings</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnCritical" checked><div><div class="alert-opt-lbl">🔴 Critical anomaly detected</div><div class="alert-opt-sub">Sudden spike/drop or >100% above normal</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnHigh" checked><div><div class="alert-opt-lbl">🟡 Elevated consumption</div><div class="alert-opt-sub">30–100% above normal average</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnGradRise"><div><div class="alert-opt-lbl">📈 Gradual upward trend</div><div class="alert-opt-sub">Steady increase across multiple readings</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnGradFall"><div><div class="alert-opt-lbl">📉 Gradual downward trend</div><div class="alert-opt-sub">Steady decline — may indicate vacancy</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnLow"><div><div class="alert-opt-lbl">🔵 Unusually low reading</div><div class="alert-opt-sub">>40% below normal — possible meter fault</div></div></label>
+        </div>
+        <div class="brow" style="margin-top:11px">
           <button class="btn btg" style="flex:1" onclick="testTelegram()">Send Test</button>
           <button class="btn btp" style="flex:1" onclick="saveTelegram()">Save</button>
         </div>
@@ -443,7 +500,7 @@ select.fi option{background:var(--sf)}
         </div>
         <div class="si"><div><div class="slbl">Clear All</div><div class="ssub">Cannot be undone</div></div><button class="btn btd" style="padding:6px 11px;font-size:12px" onclick="clearAll()">Clear</button></div>
       </div>
-      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v15 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ v16 · Property Meter Management<br><span style="color:var(--am)">Groq · Llama · Gemini · Claude Vision AI</span></div>
     </div>
   </div>
 
@@ -575,7 +632,7 @@ const MDEFS=[
   {type:'water',      icon:'💧',label:'Water',       unit:'m³', dec:2},
   {type:'gas',        icon:'🔥',label:'Gas',         unit:'m³', dec:3},
 ];
-const FSC=[1,1.1,1.2,1.35], FLB=['100%','110%','120%','135%'];
+const FSC=[1.35,1.5,1.65,1.85], FLB=['100%','110%','120%','135%'];
 const STEPS=[
   {t:'Select Unit',      s:'Which unit and meter type are you reading?'},
   {t:'Capture & Save',   s:'Add photo → crop → extract → verify → save'},
@@ -601,9 +658,11 @@ const DB={
 // ═══════════════════════════════════════════
 let S={prop:null,units:[],readings:[],activeUnit:null,activeMeter:'electricity',
   aiProv:'groq',groqKey:'',orKey:'',gemKey:'',claKey:'',dark:true,fs:1,
-  tgToken:'',tgChatId:''};
+  tgToken:'',tgChatId:'',
+  alertCfg:{onSave:false,onHigh:true,onCritical:true,onGradRise:false,onGradFall:false,onLow:false}};
+let anlScope='building', anlPeriodType='CY', anlYear=new Date().getFullYear();
 let cap={step:0,uid:null,mt:'electricity',photo:null,extracted:null,conf:null,notes:null,confirmed:null,bbox:null,croppedPhoto:null};
-let CH={mini:null,trend:null,bar:null};
+let CH={mini:null,anlMain:null,anlMulti:null};
 let apd=7;
 let pe='',pp=null;
 // Crop tool state
@@ -676,13 +735,14 @@ function genDemo(pid){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
-  const [ap,gk,ok,gmk,ck,dk,fk,tgt,tgc]=await Promise.all([
+  const [ap,gk,ok,gmk,ck,dk,fk,tgt,tgc,ac]=await Promise.all([
     DB.get('aiProv'),DB.get('groqKey'),DB.get('orKey'),DB.get('gemKey'),DB.get('claKey'),DB.get('dark'),DB.get('fs'),
-    DB.get('tgToken'),DB.get('tgChatId')
+    DB.get('tgToken'),DB.get('tgChatId'),DB.get('alertCfg')
   ]);
   if(ap!==null)S.aiProv=ap;if(gk!==null)S.groqKey=gk;if(ok!==null)S.orKey=ok;
   if(gmk!==null)S.gemKey=gmk;if(ck!==null)S.claKey=ck;if(dk!==null)S.dark=dk;if(fk!==null)S.fs=fk;
   if(tgt!==null)S.tgToken=tgt;if(tgc!==null)S.tgChatId=tgc;
+  if(ac!==null)S.alertCfg={...S.alertCfg,...ac};
   applyTheme(S.dark);applyFont(S.fs,false);
   const sp=sessionStorage.getItem('mq4_prop');
   if(sp){const p=PROPS.find(x=>x.id===sp);if(p){await loginAs(p);return;}}
@@ -727,6 +787,13 @@ async function loginAs(prop){
   document.getElementById('fontSlider').value=S.fs;document.getElementById('themeToggle').classList.toggle('on',S.dark);
   document.getElementById('tgToken').value=S.tgToken||'';
   document.getElementById('tgChatId').value=S.tgChatId||'';
+  // Alert config checkboxes
+  document.getElementById('acOnSave').checked     =S.alertCfg.onSave;
+  document.getElementById('acOnCritical').checked =S.alertCfg.onCritical;
+  document.getElementById('acOnHigh').checked     =S.alertCfg.onHigh;
+  document.getElementById('acOnGradRise').checked =S.alertCfg.onGradRise;
+  document.getElementById('acOnGradFall').checked =S.alertCfg.onGradFall;
+  document.getElementById('acOnLow').checked      =S.alertCfg.onLow;
   onProvChange();
   document.getElementById('loginScreen').classList.add('hidden');
   setTimeout(()=>document.getElementById('loginScreen').style.display='none',350);
@@ -735,7 +802,7 @@ async function loginAs(prop){
 }
 function logout(){
   sessionStorage.removeItem('mq4_prop');S.prop=null;S.units=[];S.readings=[];S.activeUnit=null;
-  ['mini','trend','bar'].forEach(k=>{if(CH[k]){CH[k].destroy();CH[k]=null;}});
+  ['mini','anlMain','anlMulti'].forEach(k=>{if(CH[k]){CH[k].destroy();CH[k]=null;}});
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('loginScreen').classList.remove('hidden');
   renderPropList();
@@ -1589,18 +1656,29 @@ async function saveReading(){
     <div class="acons">${md.unit} · ${md.icon} ${md.label}${cons!==null?` · +${cons} over ${days}d`:''}</div>
     ${tr?`<div class="tbadge ${tr.cls}"><div class="tico">${tr.icon}</div><div><strong>${tr.lbl}</strong><br><span style="font-weight:400;font-size:calc(11px * var(--fs))">${tr.txt}</span></div></div>`:`<div style="color:var(--tx2);font-size:calc(13px * var(--fs));padding:8px 0">✓ Saved. Trend analysis available after 5+ readings.</div>`}`;
   toast('✓ Reading saved!','ok');go('dash');setTimeout(()=>openM('mAssess'),300);
-  // Fire Telegram alert for critical or high anomalies
-  if(tr&&(tr.lv==='critical'||tr.lv==='high')){
-    const u=S.units.find(x=>x.id===cap.uid);
-    const emoji=tr.lv==='critical'?'🔴':'🟡';
-    const msg=`${emoji} <b>MetrIQ — ${S.prop?.name||''}</b>\n`+
-      `Unit: <b>${u?.number||''}</b> ${u?.desc?'· '+u.desc:''}\n`+
-      `Meter: ${md.icon} ${md.label}\n\n`+
-      `<b>${tr.lbl}</b>\n${tr.txt}\n\n`+
-      `Reading: <b>${fNum(r.reading,md.dec)} ${md.unit}</b>`+
-      (cons!==null?`\nConsumption: +${cons} ${md.unit} over ${days}d`:'')+
-      `\nSaved: ${fDate(r.date)} ${r.time}`;
-    sendTelegramAlert(msg);
+  // Telegram alerts based on user config
+  if(S.tgToken&&S.tgChatId){
+    const u2=S.units.find(x=>x.id===cap.uid);
+    const shouldAlert=(
+      (S.alertCfg.onSave) ||
+      (S.alertCfg.onCritical && tr?.lv==='critical') ||
+      (S.alertCfg.onHigh     && tr?.lv==='high') ||
+      (S.alertCfg.onGradRise && tr?.lbl?.includes('Upward')) ||
+      (S.alertCfg.onGradFall && tr?.lbl?.includes('Downward')) ||
+      (S.alertCfg.onLow      && tr?.lv==='low')
+    );
+    if(shouldAlert){
+      const lvEmoji=tr ? (tr.lv==='critical'?'🔴':tr.lv==='high'?'🟡':tr.lv==='low'?'🔵':'🟢') : 'ℹ️';
+      const lvLbl=tr?tr.lbl:'Reading saved';
+      const msg=`${lvEmoji} <b>MetrIQ — ${S.prop?.name||''}</b>\n`+
+        `Unit: <b>${u2?.number||''}</b>${u2?.desc?' · '+u2.desc:''}\n`+
+        `Meter: ${md.icon} ${md.label}\n\n`+
+        `<b>${lvLbl}</b>${tr?'\n'+tr.txt:''}\n\n`+
+        `Reading: <b>${fNum(r.reading,md.dec)} ${md.unit}</b>`+
+        (cons!==null?`\nConsumption: +${cons} ${md.unit} over ${days}d`:'')+
+        `\nSaved: ${fDate(r.date)} ${r.time}`;
+      sendTelegramAlert(msg);
+    }
   }
 }
 
@@ -1653,46 +1731,236 @@ function delReading(id){
 // ═══════════════════════════════════════════
 //  ANALYTICS
 // ═══════════════════════════════════════════
-function setPeriod(p){apd=p;document.querySelectorAll('.pbtn2').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.p)===p));renderAnalytics();}
+// ═══════════════════════════════════════════
+//  ANALYTICS — redesigned
+// ═══════════════════════════════════════════
+function setAnlScope(scope){
+  anlScope=scope;
+  document.getElementById('anlScopeBuilding').classList.toggle('active',scope==='building');
+  document.getElementById('anlScopeUnit').classList.toggle('active',scope==='unit');
+  document.getElementById('anlUnitRow').style.display=scope==='unit'?'':'none';
+  document.getElementById('anlMultiYearCard').style.display=scope==='building'?'':'none';
+  renderAnalytics();
+}
+function setAnlPeriod(type){
+  anlPeriodType=type;
+  document.getElementById('anlCY').classList.toggle('active',type==='CY');
+  document.getElementById('anlFY').classList.toggle('active',type==='FY');
+  renderAnalytics();
+}
+function shiftAnlYear(delta){
+  anlYear+=delta;
+  renderAnalytics();
+}
+function getAnlPeriodMonths(){
+  // Returns array of 12 {year,month(0-11),label} in period order
+  if(anlPeriodType==='CY'){
+    return Array.from({length:12},(_,i)=>({year:anlYear,month:i,label:new Date(anlYear,i).toLocaleString('en',{month:'short'})}));
+  } else {
+    // FY Apr(3) to Mar(2) — FY starts Apr of anlYear-1, ends Mar of anlYear
+    return Array.from({length:12},(_,i)=>{
+      const mo=(3+i)%12; const yr=anlYear-1+(3+i>=12?1:0);
+      return{year:yr,month:mo,label:new Date(yr,mo).toLocaleString('en',{month:'short'})};
+    });
+  }
+}
+function getAnlPeriodLabel(){
+  if(anlPeriodType==='CY') return`CY ${anlYear}`;
+  const fy0=String(anlYear-1).slice(2),fy1=String(anlYear).slice(2);
+  return`FY ${fy0}/${fy1}`;
+}
+
+// Get monthly consumption totals for a unit (or all units if null)
+function getMonthlyConsumption(unitId, meterType){
+  const units=unitId?[unitId]:S.units.map(u=>u.id);
+  const map={};
+  units.forEach(uid=>{
+    const rds=getMR(uid,meterType);
+    for(let i=1;i<rds.length;i++){
+      const c=parseFloat(rds[i].reading)-parseFloat(rds[i-1].reading);
+      if(c<0)continue;
+      const key=rds[i].date.slice(0,7); // YYYY-MM
+      map[key]=(map[key]||0)+c;
+    }
+  });
+  return map; // {YYYY-MM: consumption}
+}
+
+// Polynomial fit (degree 2) — returns [a, b, c] for y = a + bx + cx²
+function polyFit2(xs, ys){
+  const n=xs.length; if(n<3)return[ys[0]||0,0,0];
+  let s0=n,s1=0,s2=0,s3=0,s4=0,t0=0,t1=0,t2=0;
+  xs.forEach((x,i)=>{const y=ys[i];s1+=x;s2+=x*x;s3+=x*x*x;s4+=x*x*x*x;t0+=y;t1+=x*y;t2+=x*x*y;});
+  const A=[[s0,s1,s2,t0],[s1,s2,s3,t1],[s2,s3,s4,t2]];
+  for(let col=0;col<3;col++){
+    let mx=col;for(let r=col+1;r<3;r++)if(Math.abs(A[r][col])>Math.abs(A[mx][col]))mx=r;
+    [A[col],A[mx]]=[A[mx],A[col]];
+    for(let r=col+1;r<3;r++){const f=A[r][col]/A[col][col]||0;for(let k=col;k<=3;k++)A[r][k]-=f*A[col][k];}
+  }
+  const c=[0,0,0];
+  for(let i=2;i>=0;i--){c[i]=A[i][3];for(let k=i+1;k<3;k++)c[i]-=A[i][k]*c[k];c[i]/=A[i][i]||1;}
+  return c;
+}
+
+// Compute seasonal indices from historical monthly data (24+ months preferred)
+function seasonalIdx(monthlyMap){
+  const byMonth=Array.from({length:12},()=>[]);
+  Object.entries(monthlyMap).forEach(([k,v])=>{const mo=parseInt(k.slice(5))-1;byMonth[mo].push(v);});
+  const allVals=Object.values(monthlyMap);
+  if(!allVals.length)return Array(12).fill(1);
+  const overall=allVals.reduce((s,v)=>s+v,0)/allVals.length;
+  return byMonth.map(vals=>{if(!vals.length)return 1;const avg=vals.reduce((s,v)=>s+v,0)/vals.length;return overall>0?avg/overall:1;});
+}
+
+// Compute prediction for remaining months of period
+function computePrediction(periodMonths, monthlyMap, allMonthlyMap){
+  const seIdx=seasonalIdx(allMonthlyMap);
+  // Deseasonalize actuals for poly fit
+  const actuals=periodMonths.map(m=>{const k=`${m.year}-${String(m.month+1).padStart(2,'0')}`;return monthlyMap[k]??null;});
+  const knownIdx=actuals.map((v,i)=>v!==null?i:-1).filter(i=>i>=0);
+  const knownVals=knownIdx.map(i=>actuals[i]/(seIdx[periodMonths[i].month]||1));
+  if(knownVals.length<2)return{pred:Array(12).fill(null),upper:Array(12).fill(null),lower:Array(12).fill(null)};
+  // Fit poly to known deseasonalized values
+  const coef=polyFit2(knownIdx.map(i=>i),knownVals);
+  const polyVal=x=>coef[0]+coef[1]*x+coef[2]*x*x;
+  // RMSE for CI
+  const rmse=Math.sqrt(knownVals.reduce((s,v,j)=>{const diff=v-polyVal(knownIdx[j]);return s+diff*diff;},0)/knownVals.length)||0;
+  const pred=periodMonths.map((_,i)=>{
+    if(actuals[i]!==null)return null; // don't predict known months
+    const deSeas=polyVal(i);
+    return Math.max(0,deSeas*(seIdx[periodMonths[i].month]||1));
+  });
+  const upper=pred.map((v,i)=>{if(v===null)return null;const ds=polyVal(i);return Math.max(0,(ds+1.5*rmse)*(seIdx[periodMonths[i].month]||1));});
+  const lower=pred.map((v,i)=>{if(v===null)return null;const ds=polyVal(i);return Math.max(0,(ds-1.5*rmse)*(seIdx[periodMonths[i].month]||1));});
+  return{pred,upper,lower};
+}
+
+function renderAnalytics(){
+  renderMTabs('mTabsAnal','analytics');
+  // Destroy old charts
+  ['anlMain','anlMulti'].forEach(k=>{if(CH[k]){CH[k].destroy();CH[k]=null;}});
+  const md=MDEFS.find(m=>m.type===S.activeMeter);
+  const periodMos=getAnlPeriodMonths();
+  const now=new Date();
+  // Update period labels
+  document.getElementById('anlYrLbl').textContent=anlYear;
+  const fy0=String(anlYear-1).slice(2),fy1=String(anlYear).slice(2);
+  document.getElementById('anlFYLbl').textContent=`${fy0}/${fy1}`;
+
+  const unitId=anlScope==='unit'?S.activeUnit:null;
+  if(anlScope==='unit'&&!unitId){
+    document.getElementById('ytdCard').innerHTML='<div style="color:var(--tx3);font-size:13px;padding:8px 0;grid-column:1/-1">Select a unit above</div>';
+    document.getElementById('anlInsights').innerHTML='';return;
+  }
+
+  const monthlyMap=getMonthlyConsumption(unitId,md.type);
+  // Historical: last 3 years for seasonal + poly baseline
+  const allMonthlyMap=getMonthlyConsumption(unitId,md.type); // same but we have all time
+
+  const {pred,upper,lower}=computePrediction(periodMos,monthlyMap,allMonthlyMap);
+
+  // Build chart data
+  const labels=periodMos.map(m=>m.label);
+  const actuals=periodMos.map(m=>{const k=`${m.year}-${String(m.month+1).padStart(2,'0')}`;return monthlyMap[k]??null;});
+  // Is this month past, current, or future?
+  const periodKeys=periodMos.map(m=>`${m.year}-${String(m.month+1).padStart(2,'0')}`);
+  const nowKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const currentIdx=periodKeys.indexOf(nowKey);
+
+  // YTD stats
+  const ytdActuals=actuals.filter(v=>v!==null);
+  const ytdTotal=ytdActuals.reduce((s,v)=>s+v,0);
+  const ytdMonths=ytdActuals.length;
+  const predFuture=pred.filter(v=>v!==null);
+  const projTotal=ytdTotal+predFuture.reduce((s,v)=>s+v,0);
+  const projUpper=ytdTotal+upper.filter(v=>v!==null).reduce((s,v)=>s+v,0);
+  const projLower=ytdTotal+lower.filter(v=>v!==null).reduce((s,v)=>s+v,0);
+  const scopeLabel=anlScope==='building'?`All ${S.units.length} units`:(S.units.find(u=>u.id===unitId)?.number||'Unit');
+  document.getElementById('ytdCard').innerHTML=`
+    <div class="ytd-cell"><div class="ytd-lbl">YTD Consumed</div><div class="ytd-val">${fNum(ytdTotal,md.dec)}</div><div class="ytd-sub">${md.unit} · ${ytdMonths} month${ytdMonths!==1?'s':''} · ${scopeLabel}</div></div>
+    <div class="ytd-cell"><div class="ytd-lbl">Monthly Avg</div><div class="ytd-val">${ytdMonths>0?fNum(ytdTotal/ytdMonths,md.dec):'—'}</div><div class="ytd-sub">${md.unit}/month</div></div>
+    ${predFuture.length>0?`<div class="ytd-proj">
+      ${getAnlPeriodLabel()} projected total: <strong>${fNum(projTotal,md.dec)} ${md.unit}</strong>
+      <span style="color:var(--tx3)"> (range: ${fNum(projLower,md.dec)}–${fNum(projUpper,md.dec)})</span>
+    </div>`:''}`;
+
+  // Main chart
+  const am='#f59e0b';
+  const barColors=actuals.map((_,i)=>i===currentIdx?'rgba(245,158,11,.7)':'rgba(245,158,11,.38)');
+  const mc=document.getElementById('anlMainChart');if(!mc)return;
+  CH.anlMain=new Chart(mc.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Actual',data:actuals,backgroundColor:barColors,borderRadius:3,order:2},
+        {label:'Forecast',data:pred,backgroundColor:'rgba(245,158,11,.18)',borderColor:am,borderWidth:2,borderDash:[5,4],type:'line',tension:.4,pointRadius:4,pointBackgroundColor:am,fill:false,order:1},
+        {label:'Upper',data:upper,borderColor:'transparent',backgroundColor:'rgba(245,158,11,.09)',type:'line',tension:.4,pointRadius:0,fill:'+1',order:0},
+        {label:'Lower',data:lower,borderColor:'transparent',backgroundColor:'transparent',type:'line',tension:.4,pointRadius:0,fill:false,order:0},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y!==null?ctx.parsed.y.toFixed(md.dec)+' '+md.unit:'—'}`}}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{callback:v=>v.toFixed(md.dec)},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+
+  // Insights
+  const allRds=anlScope==='unit'?(S.activeUnit?getMR(S.activeUnit,md.type):[]):
+    S.units.flatMap(u=>getMR(u.id,md.type)).sort((a,b)=>a.date.localeCompare(b.date));
+  const tr=assessTrend(allRds);
+  const annualGrowthPct=coefToGrowth(actuals.filter(v=>v!==null),predFuture);
+  let insightText='';
+  if(ytdMonths<2){insightText=`<div style="color:var(--tx3);font-size:calc(13px * var(--fs))">Need at least 2 months of data for analytics.</div>`;}
+  else{
+    const avgMo=ytdMonths>0?ytdTotal/ytdMonths:0;
+    const trendTxt=tr?`${tr.icon} <strong>${tr.lbl}</strong> — ${tr.txt}`:'Insufficient data for trend analysis.';
+    const projPct=avgMo>0?((projTotal-(avgMo*12))/(avgMo*12)*100):0;
+    insightText=`
+      <div class="irow">
+        ${tr?`<div class="ii"><div class="il">Trend</div><div class="iv" style="color:${tr.lv==='critical'?'var(--rd)':tr.lv==='high'?'var(--yl)':tr.lv==='low'?'var(--bl)':'var(--gn)'};font-size:calc(12px * var(--fs));white-space:normal;line-height:1.4">${trendTxt}</div></div>`:''}
+        <div class="ii"><div class="il">YTD total</div><div class="iv">${fNum(ytdTotal,md.dec)} ${md.unit}</div></div>
+        <div class="ii"><div class="il">Monthly avg</div><div class="iv">${fNum(avgMo,md.dec)} ${md.unit}</div></div>
+        ${predFuture.length>0?`
+        <div class="ii"><div class="il">Full-year forecast</div><div class="iv">${fNum(projTotal,md.dec)} ${md.unit}</div></div>
+        <div class="ii"><div class="il">vs flat projection</div><div class="iv" style="color:${projPct>10?'var(--rd)':projPct<-10?'var(--bl)':'var(--gn)'}">${projPct>0?'+':''}${projPct.toFixed(1)}%</div></div>
+        <div class="ii"><div class="il">Forecast range</div><div class="iv" style="font-size:calc(11px * var(--fs))">${fNum(projLower,md.dec)} – ${fNum(projUpper,md.dec)} ${md.unit}</div></div>`:''}
+      </div>`;
+  }
+  document.getElementById('anlInsights').innerHTML=insightText;
+
+  // Multi-year chart (building scope)
+  if(anlScope==='building'){
+    document.getElementById('anlMultiYearCard').style.display='';
+    const mc2=document.getElementById('anlMultiChart');if(!mc2)return;
+    const years=[anlYear-2,anlYear-1,anlYear];
+    const colors=['rgba(245,158,11,.3)','rgba(245,158,11,.55)','#f59e0b'];
+    const datasets=years.map((yr,yi)=>{
+      const map=getMonthlyConsumption(null,md.type);
+      const data=Array.from({length:12},(_,mo)=>{
+        const k=`${yr}-${String(mo+1).padStart(2,'0')}`;
+        return map[k]??null;
+      });
+      return{label:String(yr),data,borderColor:colors[yi],backgroundColor:'transparent',type:'line',tension:.4,pointRadius:yi===2?4:2,borderWidth:yi===2?2:1,fill:false};
+    });
+    CH.anlMulti=new Chart(mc2.getContext('2d'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{boxWidth:12,font:{size:11}}}},
+        scales:{x:{grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{callback:v=>v.toFixed(md.dec)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  } else {
+    document.getElementById('anlMultiYearCard').style.display='none';
+  }
+}
+
+function coefToGrowth(actuals, future){
+  if(!actuals.length||!future.length)return 0;
+  const lastAct=actuals[actuals.length-1];
+  const lastFut=future[future.length-1];
+  return lastAct>0?((lastFut-lastAct)/lastAct*100):0;
+}
 function initMC(){
   Chart.defaults.color='#5a5a70';Chart.defaults.borderColor='#2a2a38';Chart.defaults.font.family="'Share Tech Mono',monospace";
   CH.mini=new Chart(document.getElementById('miniChart').getContext('2d'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:'rgba(245,158,11,.4)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
 }
 function updateMC(pts){if(!CH.mini)return;CH.mini.data.labels=pts.map(p=>p.date);CH.mini.data.datasets[0].data=pts.map(p=>Math.max(0,p.v));CH.mini.update();}
-function renderAnalytics(){
-  renderMTabs('mTabsAnal','analytics');
-  if(CH.trend){CH.trend.destroy();CH.trend=null;}if(CH.bar){CH.bar.destroy();CH.bar=null;}
-  const tc=document.getElementById('trendChart'),bc=document.getElementById('barChart');if(!tc||!bc)return;
-  const u=S.units.find(x=>x.id===S.activeUnit),md=MDEFS.find(m=>m.type===S.activeMeter);
-  if(!u||!md){document.getElementById('insightRows').innerHTML='<div style="color:var(--tx3);font-size:13px;padding:7px 0">Select a unit to see analytics</div>';return;}
-  const all=getMR(u.id,md.type),cut=new Date();cut.setDate(cut.getDate()-apd);
-  const pts=[];for(let i=1;i<all.length;i++){if(new Date(all[i].date)<cut)continue;const d=Math.max(1,dBetween(all[i-1].date,all[i].date));const c=parseFloat(all[i].reading)-parseFloat(all[i-1].reading);pts.push({date:all[i].date.slice(5),dAvg:c/d,total:c});}
-  const am='#f59e0b';
-  CH.trend=new Chart(tc.getContext('2d'),{type:'line',data:{labels:pts.map(p=>p.date),datasets:[{label:md.unit+'/day',data:pts.map(p=>Math.max(0,p.dAvg)),borderColor:am,backgroundColor:'rgba(245,158,11,.1)',fill:true,tension:.4,pointBackgroundColor:am,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:7}},y:{ticks:{callback:v=>v.toFixed(md.dec)}}}}});
-  const mm={};for(let i=1;i<all.length;i++){const mo=all[i].date.slice(0,7);mm[mo]=(mm[mo]||0)+Math.max(0,parseFloat(all[i].reading)-parseFloat(all[i-1].reading));}
-  const mos=Object.keys(mm).sort().slice(-6);
-  CH.bar=new Chart(bc.getContext('2d'),{type:'bar',data:{labels:mos.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleString('en',{month:'short',year:'2-digit'});}),datasets:[{data:mos.map(m=>mm[m]),backgroundColor:mos.map((_,i)=>i===mos.length-1?am:'rgba(245,158,11,.35)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v.toFixed(1)+' '+md.unit}}}}});
-  if(pts.length>=2){
-    const avg=pts.reduce((s,p)=>s+p.dAvg,0)/pts.length,tot=pts.reduce((s,p)=>s+p.total,0);
-    const hi=Math.max(...pts.map(p=>p.total)),lo=Math.min(...pts.map(p=>p.total));
-    const lat=pts[pts.length-1].dAvg,trnd=avg>0?((lat-avg)/avg*100):0;
-    const tr=assessTrend(all);
-    const insightNarrative=tr ? (
-      tr.lv==='critical' ? `<div class="ii"><div class="il" style="color:var(--rd)">⚠ Action Required</div><div class="iv" style="color:var(--rd);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
-      tr.lv==='high'     ? `<div class="ii"><div class="il" style="color:var(--yl)">⚠ Monitor</div><div class="iv" style="color:var(--yl);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
-      tr.lv==='low'      ? `<div class="ii"><div class="il" style="color:var(--bl)">ℹ Check</div><div class="iv" style="color:var(--bl);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>` :
-                           `<div class="ii"><div class="il" style="color:var(--gn)">✓ Assessment</div><div class="iv" style="color:var(--gn);font-size:calc(11px * var(--fs));white-space:normal;line-height:1.4">${tr.txt}</div></div>`
-    ) : '';
-    document.getElementById('insightRows').innerHTML=`
-      ${tr?`<div class="ii"><div class="il">Status</div><div class="iv" style="color:${tr.lv==='critical'?'var(--rd)':tr.lv==='high'?'var(--yl)':tr.lv==='low'?'var(--bl)':'var(--gn)'}">${tr.icon} ${tr.lbl}</div></div>`:''}
-      ${insightNarrative}
-      <div class="ii"><div class="il">Avg daily</div><div class="iv">${avg.toFixed(md.dec)} ${md.unit}</div></div>
-      <div class="ii"><div class="il">Total (${apd}d)</div><div class="iv">${tot.toFixed(md.dec)} ${md.unit}</div></div>
-      <div class="ii"><div class="il">vs period avg</div><div class="iv" style="color:${trnd>30?'var(--rd)':trnd<-30?'var(--bl)':'var(--gn)'}">${trnd>0?'+':''}${trnd.toFixed(0)}% (latest period)</div></div>
-      <div class="ii"><div class="il">Highest period</div><div class="iv">${hi.toFixed(md.dec)} ${md.unit}</div></div>
-      <div class="ii"><div class="il">Lowest period</div><div class="iv">${lo.toFixed(md.dec)} ${md.unit}</div></div>`;
-  }else{document.getElementById('insightRows').innerHTML='<div style="color:var(--tx3);font-size:13px;padding:7px 0">Need readings within selected period</div>';}
-}
 
 // ═══════════════════════════════════════════
 //  SETTINGS
@@ -1712,7 +1980,15 @@ function saveSettings(){
 function saveTelegram(){
   S.tgToken=document.getElementById('tgToken').value.trim();
   S.tgChatId=document.getElementById('tgChatId').value.trim();
-  DB.set('tgToken',S.tgToken);DB.set('tgChatId',S.tgChatId);
+  S.alertCfg={
+    onSave:    document.getElementById('acOnSave').checked,
+    onCritical:document.getElementById('acOnCritical').checked,
+    onHigh:    document.getElementById('acOnHigh').checked,
+    onGradRise:document.getElementById('acOnGradRise').checked,
+    onGradFall:document.getElementById('acOnGradFall').checked,
+    onLow:     document.getElementById('acOnLow').checked,
+  };
+  DB.set('tgToken',S.tgToken);DB.set('tgChatId',S.tgChatId);DB.set('alertCfg',S.alertCfg);
   toast('✓ Telegram settings saved','ok');
 }
 async function testTelegram(){
@@ -1975,7 +2251,7 @@ function generateReport(){
     <span>🔵 Low — −40%+ below avg, check meter/supply</span>
   </div>
 
-  <div class="footer">MetrIQ v15 · Smart Meter Management · ${new Date().toISOString()}</div>
+  <div class="footer">MetrIQ v16 · Smart Meter Management · ${new Date().toISOString()}</div>
   </body></html>`;
 
   closeM('mReport');
