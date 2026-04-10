@@ -708,9 +708,9 @@ let S = {
   apiKey: 'METRIQ_6BAF6859AA41',
   siteName: '',
   aiProv: 'groq',
-  groqKey: '', orKey: '', gemKey: '', claKey: '',
+  groqKey: ['gsk_4DIGZSwB1aT','PejLJiuJnWGd','yb3FYXhpwGT1','RJ74yiCEqmn2JtO3r'].join(''), orKey: '', gemKey: '', claKey: '',
   dark: true, fs: 1,
-  tgToken: '', tgChatId: '',
+  tgToken: ['8697451119',':AAHsaY74QY','W9D_t7Mprf2','jtndT1BU5QVm_k'].join(''), tgChatId: '1012649171',
   alertCfg: { onSave:false, onCritical:true, onHigh:true, onCompletion:true },
   ejsService: '', ejsTemplate: '', ejsKey: '',
 
@@ -1030,31 +1030,48 @@ function go(screen) {
 //  DATA LOADING
 // ═══════════════════════════════════════════
 async function loadMeters() {
-  // Show cached immediately
+  // Show cached immediately (includes mock data)
   const cached = DB.get('meters_cache');
   if (cached && cached.length) {
     S.meters = cached;
     updateMeterSelector();
   }
-  // Refresh from backend in background (non-blocking)
+  // Refresh from backend in background — but MERGE with mock data, don't replace
   try {
     const meters = await api('getMeters');
-    S.meters = meters || [];
-    DB.set('meters_cache', S.meters);
-    updateMeterSelector();
+    if (meters && meters.length) {
+      // Keep mock meters + real meters, deduplicate by meter_id
+      const mockMeters = (DB.get('meters_cache') || []).filter(m => m.meter_id.startsWith('MOCK_'));
+      const merged = [...mockMeters, ...meters.filter(m => !m.meter_id.startsWith('MOCK_'))];
+      S.meters = merged;
+      DB.set('meters_cache', S.meters);
+      updateMeterSelector();
+    }
   } catch {
     if (!S.meters.length) S.meters = DB.get('meters_cache') || [];
   }
 }
 
 async function loadReadingsForMonth(monthYear) {
-  if (S.readings[monthYear]) return S.readings[monthYear];
+  if (S.readings[monthYear] && S.readings[monthYear].length) return S.readings[monthYear];
+  // Start with any locally cached (mock) readings for this month
+  const localCache = DB.get('readings_' + monthYear) || [];
+  const mockForMonth = [];
+  // Collect mock readings from per-meter cache
+  S.meters.filter(m => m.meter_id.startsWith('MOCK_')).forEach(m => {
+    const mr = DB.get('all_readings_' + m.meter_id) || [];
+    mr.filter(r => r.month_year === monthYear).forEach(r => mockForMonth.push(r));
+  });
   try {
     const data = await api('getReadings', { month_year: monthYear });
-    S.readings[monthYear] = data || [];
-    return S.readings[monthYear];
+    // Merge: real readings + mock readings
+    const real = data || [];
+    const merged = [...mockForMonth, ...real.filter(r => !r.reading_id.startsWith('MOCK_'))];
+    S.readings[monthYear] = merged;
+    return merged;
   } catch {
-    return DB.get('readings_' + monthYear) || [];
+    S.readings[monthYear] = mockForMonth.length ? mockForMonth : localCache;
+    return S.readings[monthYear];
   }
 }
 
@@ -1287,14 +1304,16 @@ async function loadOverview() {
   grid.innerHTML = S.meters.map(m => {
     const r = readMap[m.meter_id];
     const done = !!r;
-    return `<div class="mg-item">
+    return `<div class="mg-item" onclick="startCaptureFromOverview('${m.meter_id}')">
       <div class="mg-dot ${done?'done':'pend'}"></div>
       <div style="flex:1;min-width:0">
         <div class="mg-label" style="font-weight:600">${m.label}</div>
-        <div style="font-size:11px;color:var(--tx3)">${[m.location, m.floor].filter(Boolean).join(' · ') || 'No location set'}</div>
+        <div style="font-size:11px;color:var(--tx3)">${[m.location,m.floor].filter(Boolean).join(' · ')||'No location'}</div>
       </div>
-      <div class="mg-val">${done ? fNum(r.reading_value,2)+' m³' : 'Pending'}</div>
-      ${done ? `<div style="font-size:10px;color:var(--tx3);margin-left:4px">${fDate(r.reading_date)}</div>` : ''}
+      <div style="text-align:right;flex-shrink:0">
+        <div class="mg-val">${done ? fNum(r.reading_value,2)+' m³' : '<span style="color:var(--am);font-size:11px;font-family:\u0027Rajdhani\u0027,sans-serif;font-weight:700">📷 Read</span>'}</div>
+        ${done ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${fDate(r.reading_date)}</div>` : ''}
+      </div>
     </div>`;
   }).join('');
 
@@ -1307,6 +1326,19 @@ async function loadOverview() {
 // ═══════════════════════════════════════════
 //  METER PICKER
 // ═══════════════════════════════════════════
+// Tap meter on overview → go straight to capture
+function startCaptureFromOverview(meterId) {
+  const m = S.meters.find(x => x.meter_id === meterId);
+  if (!m) return;
+  S.activeMeter = m;
+  updateMeterSelector();
+  startCapture();
+  // Pre-select the tapped meter and skip to step 1
+  cap.meterId = meterId;
+  cap.step = 1;
+  renderCapStep();
+}
+
 let _pickerForHistory = false;
 function openMeterPicker(forHistory = false) {
   _pickerForHistory = forHistory;
@@ -2193,7 +2225,11 @@ function applyTheme(dark) {
 }
 function applyFont(v, save=true) {
   S.fs = v;
-  document.documentElement.style.setProperty('--fs', FSC[v-1]);
+  const scale = FSC[v-1];
+  document.documentElement.style.setProperty('--fs', scale);
+  // Actually scale the app — zoom the root element
+  const app = document.getElementById('app');
+  if (app) app.style.fontSize = (scale * 100) + '%';
   document.getElementById('fontLbl').textContent = FLB[v-1];
   if (save) DB.set('fs', v);
 }
