@@ -291,6 +291,19 @@ input[type=range]{flex:1;accent-color:var(--am)}
   <div class="lt">Smart Water Meter Reader</div>
   <div class="lsite" id="loginSiteName">—</div>
 
+  <!-- First-time setup panel — shown when no backend URL is configured -->
+  <div id="setupPanel" style="display:none;width:100%;max-width:360px;margin-bottom:18px">
+    <div style="background:var(--rdd);border:1px solid var(--rd);border-radius:var(--r);padding:13px 14px;margin-bottom:12px;font-size:12px;color:var(--rd)">
+      ⚙️ <strong>Backend not configured.</strong> Paste your Apps Script URL and API key to connect.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="fg"><div class="fl">Apps Script Web App URL</div><input class="fi ft" id="setupUrl" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:11px"></div>
+      <div class="fg"><div class="fl">API Key</div><input class="fi ft" id="setupApiKey" type="password" placeholder="METRIQ_XXXXXXXXXXXX"></div>
+      <div class="fg"><div class="fl">Site Name</div><input class="fi" id="setupSiteName" placeholder="e.g. Block 5A"></div>
+      <button class="btn btp wf" onclick="saveSetupAndConnect()">Connect & Continue →</button>
+    </div>
+  </div>
+
   <div id="roleList" class="pg">
     <div class="pc" onclick="selRole('Inspector')">
       <div class="pi">🔦</div>
@@ -734,6 +747,9 @@ async function init() {
   // Update login screen site name
   document.getElementById('loginSiteName').textContent = S.siteName || '—';
 
+  // Show setup panel if backend not yet configured
+  checkSetupNeeded();
+
   // Try to restore session
   const sess = sessionStorage.getItem('miq_session');
   if (sess) {
@@ -764,6 +780,58 @@ function showBeStatus(type, msg) {
   el.style.display = '';
   el.className = 'be-status ' + type;
   el.textContent = msg;
+}
+
+// Show setup panel when no backend configured
+function checkSetupNeeded() {
+  const needsSetup = !S.backendUrl || !S.apiKey;
+  document.getElementById('setupPanel').style.display = needsSetup ? '' : 'none';
+  document.getElementById('roleList').style.display = needsSetup ? 'none' : 'flex';
+  if (needsSetup) {
+    document.getElementById('setupUrl').value = S.backendUrl || '';
+    document.getElementById('setupApiKey').value = S.apiKey || '';
+    document.getElementById('setupSiteName').value = S.siteName || '';
+  }
+}
+
+async function saveSetupAndConnect() {
+  const url = document.getElementById('setupUrl').value.trim();
+  const key = document.getElementById('setupApiKey').value.trim();
+  const site = document.getElementById('setupSiteName').value.trim();
+  if (!url || !key) { toast('URL and API key are required', 'err'); return; }
+
+  // Test connection first
+  const btn = event.currentTarget;
+  btn.textContent = 'Connecting…';
+  btn.disabled = true;
+  try {
+    const res = await fetch(url);
+    const d = await res.json();
+    if (!d.ok && d.ok !== undefined) throw new Error(d.error || 'Backend returned error');
+  } catch (e) {
+    // Non-JSON response is also OK for GET (Apps Script sometimes returns HTML on GET)
+    // Only fail if it's a network error
+    if (e.message === 'Failed to fetch') {
+      btn.textContent = 'Connect & Continue →';
+      btn.disabled = false;
+      toast('Cannot reach URL — check it is correct', 'err');
+      return;
+    }
+  }
+
+  // Save
+  S.backendUrl = url;
+  S.apiKey = key;
+  S.siteName = site;
+  DB.set('backendUrl', url);
+  DB.set('apiKey', key);
+  DB.set('siteName', site);
+  document.getElementById('loginSiteName').textContent = site || 'MetrIQ';
+
+  btn.textContent = 'Connect & Continue →';
+  btn.disabled = false;
+  toast('✓ Backend connected', 'ok');
+  checkSetupNeeded();
 }
 
 // ═══════════════════════════════════════════
