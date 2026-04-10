@@ -2,9 +2,14 @@
  * MetrIQ MVP v1 — Google Apps Script Backend
  * Sheet: Meters | Readings | Users | Config
  *
- * Deploy as Web App:
- *   Execute as: Me
- *   Who has access: Anyone
+ * IMPORTANT: This script must be bound to a Google Sheet.
+ * Do NOT create it as a standalone script.
+ *
+ * Correct setup:
+ *   1. Open Google Sheets → Extensions → Apps Script
+ *   2. Paste this entire file
+ *   3. Run setupSheets() once
+ *   4. Deploy → New Deployment → Web App
  *
  * Copy the Web App URL into Admin → Settings → Backend URL
  */
@@ -15,6 +20,15 @@ const SH_READINGS = 'Readings';
 const SH_USERS    = 'Users';
 const SH_CONFIG   = 'Config';
 
+// ─── SPREADSHEET HELPER ─────────────────────────────────
+// Always use this instead of SpreadsheetApp.getActiveSpreadsheet()
+// Works whether script is bound to a sheet or runs as a web app.
+function getSS() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Script must be bound to a Google Sheet. Open Sheets → Extensions → Apps Script, not script.google.com directly.');
+  return ss;
+}
+
 // Simple shared API key — stored in Config sheet, key = 'api_key'
 // Admin sets this once; it's embedded in the app's admin settings.
 
@@ -23,6 +37,7 @@ function doPost(e) {
   const out = ContentService.createTextOutput();
   out.setMimeType(ContentService.MimeType.JSON);
   try {
+    if (!e || !e.postData) throw new Error('No POST data received');
     const body = JSON.parse(e.postData.contents);
     const result = route(body);
     out.setContent(JSON.stringify({ ok: true, data: result }));
@@ -84,7 +99,7 @@ function route(body) {
 
 // ─── KEY VERIFICATION ──────────────────────────────────
 function verifyKey(key) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
   const sheet = ss.getSheetByName(SH_CONFIG);
   if (!sheet) return false;
   const data = sheet.getDataRange().getValues();
@@ -96,9 +111,9 @@ function verifyKey(key) {
 
 // ─── HELPERS ───────────────────────────────────────────
 function getSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
   const s = ss.getSheetByName(name);
-  if (!s) throw new Error('Sheet not found: ' + name);
+  if (!s) throw new Error('Sheet not found: ' + name + '. Run setupSheets() first.');
   return s;
 }
 
@@ -481,7 +496,7 @@ function getMonthSummary(body) {
 // ─── SAVE AS COPY ──────────────────────────────────────
 function saveAsCopy(body) {
   const { label } = body;
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
   const copyName = (label || 'MetrIQ Data') + ' — Copy ' + Utilities.formatDate(new Date(), 'Asia/Singapore', 'yyyy-MM-dd HH:mm');
   const copy = ss.copy(copyName);
   // Make it accessible to anyone with link
@@ -516,9 +531,13 @@ function resetEmailQuota() {
 }
 
 // ─── SETUP HELPER ──────────────────────────────────────
-// Run this ONCE manually to set up sheet headers and default config
+// Run this ONCE manually to set up sheet headers and default config.
+//
+// HOW TO RUN:
+//   In Apps Script editor → select 'setupSheets' from the function dropdown → click Run
+//
 function setupSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
 
   function ensureSheet(name, headers) {
     let s = ss.getSheetByName(name);
@@ -537,13 +556,19 @@ function setupSheets() {
   ensureSheet(SH_USERS,    USER_HEADERS);
   ensureSheet(SH_CONFIG,   ['key', 'value']);
 
+  // Remove the default blank 'Sheet1' if it exists
+  const defaultSheet = ss.getSheetByName('Sheet1');
+  if (defaultSheet && ss.getSheets().length > 1) {
+    ss.deleteSheet(defaultSheet);
+  }
+
   // Default config values
   const configSheet = ss.getSheetByName(SH_CONFIG);
   const existingData = configSheet.getDataRange().getValues();
   const existingKeys = existingData.map(r => r[0]);
 
   const defaults = [
-    ['api_key',            'CHANGE_ME_' + Math.random().toString(36).slice(2, 10).toUpperCase()],
+    ['api_key',            'METRIQ_' + Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase()],
     ['site_name',          'My Site'],
     ['email_quota_used',   '0'],
     ['email_quota_month',  ''],
@@ -559,14 +584,59 @@ function setupSheets() {
     if (!existingKeys.includes(k)) configSheet.appendRow([k, v]);
   });
 
-  // Protect the Config sheet api_key row from viewers
+  // Protect the Config sheet (warning only — prevents accidental edits)
   const protection = configSheet.protect().setDescription('Config — Admin only');
   protection.setWarningOnly(true);
 
+  // Show the api_key in a dialog so you can copy it immediately
+  const apiKey = configSheet.getDataRange().getValues().find(r => r[0] === 'api_key')?.[1] || '(see Config sheet)';
+
   SpreadsheetApp.getUi().alert(
-    'MetrIQ Setup Complete!\n\n' +
-    'Your API key is in the Config sheet (api_key row).\n' +
-    'Copy it into the app Admin → Settings → API Key.\n\n' +
-    'Also update: site_name, EmailJS keys, Telegram token.'
+    '✅ MetrIQ Setup Complete!\n\n' +
+    'API Key (copy this now):\n' + apiKey + '\n\n' +
+    'Steps:\n' +
+    '1. Copy the API key above\n' +
+    '2. Deploy → New Deployment → Web App\n' +
+    '   Execute as: Me | Access: Anyone\n' +
+    '3. Copy the Web App URL\n' +
+    '4. In the app: Admin → Settings → paste URL + API key\n\n' +
+    'The API key is also in the Config sheet (api_key row).'
+  );
+}
+
+// ─── ADD FIRST ADMIN ──────────────────────────────────
+// Run this ONCE after setupSheets() to create your first Admin user.
+// Change the values below before running.
+function addFirstAdmin() {
+  const NAME  = 'Admin';        // ← change to your name
+  const PIN   = '123456';       // ← change to your 6-digit PIN
+  const EMAIL = 'you@email.com'; // ← change to your email
+
+  const sheet = getSheet(SH_USERS);
+  const existing = sheetToObjects(sheet);
+  if (existing.some(u => u.role === 'Admin' && u.active !== 'N')) {
+    SpreadsheetApp.getUi().alert('An active Admin user already exists. Use the app to add more users.');
+    return;
+  }
+  if (!/^\d{6}$/.test(PIN)) {
+    SpreadsheetApp.getUi().alert('PIN must be exactly 6 digits.');
+    return;
+  }
+  const user = {
+    user_id: 'U_' + Date.now(),
+    name: NAME,
+    role: 'Admin',
+    pin_hash: hashPin(PIN),
+    telegram_chat_id: '',
+    email: EMAIL,
+    active: 'Y',
+    created_at: new Date().toISOString()
+  };
+  appendRow(sheet, USER_HEADERS, user);
+  SpreadsheetApp.getUi().alert(
+    '✅ Admin user created!\n\n' +
+    'Name: ' + NAME + '\n' +
+    'PIN: ' + PIN + '\n\n' +
+    'You can now log into the app as Admin.'
   );
 }
