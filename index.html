@@ -678,8 +678,8 @@ let S = {
   user: null,        // {user_id, name, role, email, telegram_chat_id}
 
   // settings (persisted locally)
-  backendUrl: '',
-  apiKey: '',
+  backendUrl: 'https://script.google.com/macros/s/AKfycbxkPwGIb2TnRKNiBN0zeiE7equoWTcJ5wGiLUojmOogHUQnJFwbFaMkBKmlBlyCK3pF/exec',
+  apiKey: 'METRIQ_6BAF6859AA41',
   siteName: '',
   aiProv: 'groq',
   groqKey: '', orKey: '', gemKey: '', claKey: '',
@@ -734,9 +734,9 @@ async function apiSafe(action, params = {}) {
 //  INIT
 // ═══════════════════════════════════════════
 async function init() {
-  // Load persisted settings
+  // Load persisted settings (only override defaults if a value was explicitly saved)
   const keys = ['backendUrl','apiKey','siteName','aiProv','groqKey','orKey','gemKey','claKey','dark','fs','tgToken','tgChatId','alertCfg','ejsService','ejsTemplate','ejsKey'];
-  keys.forEach(k => { const v = DB.get(k); if (v !== null) S[k] = v; });
+  keys.forEach(k => { const v = DB.get(k); if (v !== null && v !== '') S[k] = v; });
 
   // Load offline queue
   S.syncQueue = DB.get('syncQueue') || [];
