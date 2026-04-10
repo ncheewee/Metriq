@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0c0c0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MetrIQ">
+<title>MetrIQ</title>
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22MetrIQ%22%2C%22short_name%22%3A%22MetrIQ%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230c0c0f%22%2C%22theme_color%22%3A%22%230c0c0f%22%7D">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+/* ── THEME ── */
+:root{
+  --bg:#0c0c0f;--sf:#141418;--sf2:#1c1c22;
+  --bd:#2a2a38;--bd2:#3a3a4a;
+  --am:#f59e0b;--amg:rgba(245,158,11,.15);
+  --gn:#10b981;--gnd:rgba(16,185,129,.15);
+  --rd:#ef4444;--rdd:rgba(239,68,68,.15);
+  --bl:#3b82f6;--bld:rgba(59,130,246,.15);
+  --yl:#eab308;--yld:rgba(234,179,8,.15);
+  --tx:#e0e0ea;--tx2:#8888a0;--tx3:#555568;
+  --num:#fbbf24;--r:12px;--rs:8px;--fs:1;
+}
+body.light{
+  --bg:#f0f2f5;--sf:#fff;--sf2:#e8eaf0;
+  --bd:#d0d4de;--bd2:#b8bdd0;
+  --am:#d97706;--amg:rgba(217,119,6,.12);
+  --gn:#059669;--gnd:rgba(5,150,105,.12);
+  --rd:#dc2626;--rdd:rgba(220,38,38,.12);
+  --bl:#2563eb;--bld:rgba(37,99,235,.12);
+  --yl:#ca8a04;--yld:rgba(202,138,4,.12);
+  --tx:#1a1a2e;--tx2:#44445a;--tx3:#888899;--num:#b45309;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Barlow',sans-serif;overflow:hidden;transition:background .2s,color .2s}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:60px 20px 32px;transition:opacity .3s;overflow-y:auto}
+#loginScreen.hidden{opacity:0;pointer-events:none}
+.ll{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:38px;letter-spacing:3px;color:var(--am);margin-bottom:4px}
+.lt{font-size:12px;color:var(--tx2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.lsite{font-size:11px;color:var(--tx3);font-family:'Share Tech Mono',monospace;margin-bottom:28px;letter-spacing:1px}
+.pg{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px}
+.pc{display:flex;align-items:center;gap:14px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:15px;cursor:pointer;transition:all .2s}
+.pc:active{border-color:var(--am);background:var(--amg)}
+.pi{font-size:26px;width:44px;height:44px;background:var(--sf2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pn{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600}
+.pa{font-size:12px;color:var(--tx2);margin-top:2px}
+#pinScreen{display:none;flex-direction:column;align-items:center;width:100%;max-width:320px}
+#pinScreen.show{display:flex}
+.ppn{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;margin-bottom:4px;text-align:center}
+.ppl{font-size:13px;color:var(--tx2);margin-bottom:18px}
+.pds{display:flex;gap:10px;margin-bottom:20px}
+.pd{width:14px;height:14px;border-radius:50%;border:2px solid var(--bd2);transition:all .15s}
+.pd.on{background:var(--am);border-color:var(--am)}
+.pd.err{background:var(--rd);border-color:var(--rd)}
+.pe{font-size:13px;color:var(--rd);margin-top:-14px;margin-bottom:12px;height:18px;text-align:center}
+.pp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.pb{height:58px;border-radius:var(--rs);background:var(--sf);border:1px solid var(--bd);font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:600;color:var(--tx);cursor:pointer;transition:all .1s;display:flex;align-items:center;justify-content:center}
+.pb:active{background:var(--amg);border-color:var(--am);transform:scale(.95)}
+.pb.del{color:var(--tx2)}.pb.emp{background:none;border:none;cursor:default}
+.pbk{margin-top:14px;background:none;border:none;color:var(--tx3);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:1px;text-transform:uppercase}
+.lver{position:fixed;bottom:16px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:1px}
+/* backend status on login */
+.be-status{margin-top:14px;font-size:11px;font-family:'Share Tech Mono',monospace;padding:7px 14px;border-radius:20px;border:1px solid var(--bd);color:var(--tx3)}
+.be-status.ok{border-color:var(--gn);color:var(--gn)}
+.be-status.err{border-color:var(--rd);color:var(--rd)}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+#hdr{padding:10px 14px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);flex-shrink:0;gap:8px}
+.logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:19px;letter-spacing:2px;color:var(--am);flex-shrink:0}
+.hc{display:flex;flex-direction:column;flex:1;min-width:0;padding:0 8px}
+.hp{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hu{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdrbadge{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.sync-badge{font-family:'Share Tech Mono',monospace;font-size:10px;background:var(--rdd);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 8px;display:none;cursor:pointer}
+.sync-badge.show{display:block}
+.sochip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:14px;border:1px solid var(--bd);background:var(--sf2);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;color:var(--tx2);cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.5px}
+.sochip:active{border-color:var(--rd);color:var(--rd);background:var(--rdd)}
+#screens{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;padding:13px 14px 18px;display:none;flex-direction:column;gap:12px}
+.screen.active{display:flex}
+#nav{display:flex;border-top:1px solid var(--bd);flex-shrink:0;background:var(--sf)}
+.nb{flex:1;padding:9px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--tx3);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:color .2s}
+.nb .ni{font-size:18px}.nb.active{color:var(--am)}.nb:active{opacity:.7}
+.nb.hidden{display:none}
+
+/* ── CARDS ── */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:13px 14px}
+.clbl{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)}
+.stitle{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx2);margin-bottom:10px}
+
+/* dashboard reading */
+.dnum{font-family:'Rajdhani',sans-serif;font-size:52px;font-weight:700;color:var(--num);letter-spacing:2px;line-height:1;margin:6px 0 2px}
+.dunit{font-size:13px;color:var(--tx2)}
+.ddate{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--tx3);margin-top:3px}
+.srow{display:flex;gap:10px}
+.sc{flex:1;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 10px;text-align:center}
+.sv{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--tx);margin:4px 0 2px}
+.sl{font-size:10px;color:var(--tx3);letter-spacing:.5px}
+/* trend badge */
+.tbadge{display:flex;gap:10px;padding:11px 13px;border-radius:var(--rs);font-size:12px;line-height:1.55}
+.tico{font-size:18px;flex-shrink:0;margin-top:1px}
+.t-critical{background:var(--rdd);border:1px solid var(--rd)}
+.t-high{background:var(--yld);border:1px solid var(--yl)}
+.t-low{background:var(--bld);border:1px solid var(--bl)}
+.t-normal{background:var(--gnd);border:1px solid var(--gn)}
+.cw{position:relative;height:100px}
+.fab{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;background:var(--am);border:none;border-radius:var(--r);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0c0c0f;cursor:pointer;transition:opacity .2s;flex-shrink:0}
+.fab:active{opacity:.8}
+.fab:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── METER SELECTOR ── */
+.usb{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);cursor:pointer;transition:border-color .2s;text-align:left}
+.usb:active{border-color:var(--am)}
+.usb-ico{font-size:20px;width:38px;height:38px;background:var(--sf2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.usb-num{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--tx);line-height:1.1}
+.usb-desc{font-size:12px;color:var(--tx2);margin-top:1px}
+.usb-meta{margin-left:auto;text-align:right;flex-shrink:0}
+.usb-cnt{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--tx3)}
+.usb-arr{color:var(--tx3);font-size:13px;margin-top:2px}
+.usrch{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:10px 13px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:15px;outline:none;width:100%;margin-bottom:11px}
+.usrch:focus{border-color:var(--am)}
+.upl{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto}
+.upi{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);cursor:pointer;transition:all .15s}
+.upi:active,.upi.cur{border-color:var(--am);background:var(--amg)}
+.upi-num{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--tx)}
+.upi-desc{font-size:12px;color:var(--tx2);margin-top:1px}
+.upi-done{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:auto;flex-shrink:0}
+.upi-done.yes{background:var(--gnd);color:var(--gn)}
+.upi-done.no{background:var(--sf2);color:var(--tx3)}
+
+/* ── CAPTURE ── */
+.sbar{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:6px}
+.sdot{width:10px;height:10px;border-radius:50%;border:2px solid var(--bd2);transition:all .2s;flex-shrink:0}
+.sdot.done{background:var(--gn);border-color:var(--gn)}
+.sdot.cur{background:var(--am);border-color:var(--am);transform:scale(1.2)}
+.sline{flex:1;height:2px;background:var(--bd);max-width:40px}
+.stit{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--tx)}
+.ssub{font-size:12px;color:var(--tx2);margin-top:2px}
+.brow{display:flex;gap:10px;flex-shrink:0;padding-top:4px}
+.btn{flex:1;padding:13px;border-radius:var(--rs);border:1px solid var(--bd);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:.8px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btp{background:var(--am);border-color:var(--am);color:#0c0c0f}
+.btg{background:var(--sf2);color:var(--tx)}
+.btd{background:var(--rdd);border-color:var(--rd);color:var(--rd)}
+.btn:active{opacity:.75}.btn:disabled{opacity:.4;cursor:not-allowed}
+.wf{width:100%}
+/* entry mode buttons */
+.entry-modes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+.entry-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--tx2);letter-spacing:.5px;transition:all .2s}
+.entry-btn:active,.entry-btn.sel{border-color:var(--am);color:var(--am);background:var(--amg)}
+.eico{font-size:26px}
+/* photo preview */
+.prev-wrap{position:relative;background:var(--sf2);border-radius:var(--r);overflow:hidden;min-height:140px;display:flex;align-items:center;justify-content:center}
+.prev-wrap img{width:100%;max-height:240px;object-fit:contain;display:block}
+.prev-retake{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);border-radius:var(--rs);color:#fff;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;padding:5px 10px;cursor:pointer;letter-spacing:.5px}
+/* crop canvas */
+#cropCanvas{width:100%;border-radius:var(--rs);cursor:crosshair;touch-action:none}
+.crop-hint{font-size:11px;color:var(--tx3);text-align:center;margin-top:4px}
+/* extraction */
+.extbox{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 13px;margin:10px 0;font-size:13px;line-height:1.6}
+.extnum{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--num);letter-spacing:2px}
+.extconf{font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:2px}
+.conf-hi{color:var(--gn)}.conf-md{color:var(--yl)}.conf-lo{color:var(--rd)}
+.confirm-row{display:flex;gap:8px;margin-top:10px}
+.conf-btn{flex:1;padding:10px;border-radius:var(--rs);border:1px solid var(--bd);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--sf2);color:var(--tx)}
+.conf-btn.yes{border-color:var(--gn);color:var(--gn);background:var(--gnd)}
+.conf-btn.no{border-color:var(--rd);color:var(--rd);background:var(--rdd)}
+.conf-btn:active{opacity:.75}
+/* manual input */
+.manual-inp{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px;color:var(--tx);font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;width:100%;outline:none;text-align:center;letter-spacing:2px}
+.manual-inp:focus{border-color:var(--am)}
+/* save form */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:1px}
+.fi{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:10px 12px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;outline:none;width:100%}
+.fi:focus{border-color:var(--am)}
+.ft{font-family:'Share Tech Mono',monospace;font-size:13px}
+.fhint{font-size:11px;color:var(--tx3);margin-top:3px}
+/* sync indicator */
+.sync-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);font-size:12px;color:var(--tx2)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--bd2);border-top-color:var(--am);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── HISTORY ── */
+.hi{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:13px 14px;cursor:pointer;transition:border-color .2s}
+.hi:active{border-color:var(--am)}
+.hi-top{display:flex;justify-content:space-between;align-items:flex-start}
+.hi-num{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--num);letter-spacing:1px}
+.hi-meta{font-size:11px;color:var(--tx3);text-align:right;font-family:'Share Tech Mono',monospace}
+.hi-label{font-size:12px;color:var(--tx2);margin-top:3px}
+.hi-delta{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;margin-top:5px}
+
+/* ── OVERVIEW (Manager) ── */
+.ov-progress{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px}
+.ov-pct{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;color:var(--num);line-height:1}
+.ov-sub{font-size:12px;color:var(--tx2);margin-top:3px}
+.pbar-wrap{background:var(--sf2);border-radius:20px;height:8px;overflow:hidden;margin-top:10px}
+.pbar{height:100%;border-radius:20px;background:var(--am);transition:width .6s ease}
+.meter-grid{display:flex;flex-direction:column;gap:7px}
+.mg-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs)}
+.mg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mg-dot.done{background:var(--gn)}
+.mg-dot.pend{background:var(--bd2)}
+.mg-label{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-val{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--tx3)}
+
+/* ── ANALYTICS ── */
+.anl-scope{display:flex;gap:7px;margin-bottom:2px}
+.anl-scope-btn{flex:1;padding:9px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer;transition:all .2s}
+.anl-scope-btn.active{border-color:var(--am);color:var(--am);background:var(--amg)}
+.ytd-card{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ytdc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 12px;text-align:center}
+.ytdv{font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:var(--num)}
+.ytdl{font-size:10px;color:var(--tx3);margin-top:2px}
+
+/* ── SETTINGS ── */
+.si{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.si:last-child{border-bottom:none;padding-bottom:0}
+.si:first-child{padding-top:0}
+.slbl{font-size:13px;font-weight:500}
+.ssub{font-size:11px;color:var(--tx3);margin-top:2px}
+.tog{width:42px;height:24px;border-radius:12px;background:var(--bd2);border:none;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.tog.on{background:var(--am)}.tog.on::after{transform:translateX(18px)}
+.sw{display:flex;align-items:center;gap:10px;color:var(--tx2);font-size:12px}
+.swv{font-family:'Share Tech Mono',monospace;font-size:11px;width:36px;text-align:right;color:var(--am)}
+input[type=range]{flex:1;accent-color:var(--am)}
+.alert-opts{display:flex;flex-direction:column;gap:8px}
+.alert-opt{display:flex;align-items:flex-start;gap:11px;cursor:pointer;padding:8px 0;border-bottom:1px solid var(--bd)}
+.alert-opt:last-child{border-bottom:none}
+.alert-opt input{width:16px;height:16px;accent-color:var(--am);flex-shrink:0;margin-top:2px}
+.alert-opt-lbl{font-size:13px}
+.alert-opt-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+/* quota bar */
+.quota-wrap{margin-top:8px;background:var(--sf2);border-radius:var(--rs);padding:10px 12px}
+.quota-bar-bg{background:var(--bd);border-radius:20px;height:6px;overflow:hidden;margin-top:6px}
+.quota-bar-fg{height:100%;border-radius:20px;background:var(--gn);transition:width .4s}
+.quota-bar-fg.warn{background:var(--yl)}
+.quota-bar-fg.crit{background:var(--rd)}
+.quota-lbl{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--tx2)}
+/* admin user list */
+.user-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs)}
+.user-role-badge{font-size:10px;font-family:'Rajdhani',sans-serif;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.5px;flex-shrink:0}
+.role-Inspector{background:var(--bld);color:var(--bl)}
+.role-Manager{background:var(--yld);color:var(--yl)}
+.role-Admin{background:var(--amg);color:var(--am)}
+
+/* ── MODALS ── */
+.ov{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.modal{background:var(--sf);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:22px 18px 28px}
+.mh{width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 18px}
+.mt{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;margin-bottom:16px}
+/* ── TOAST ── */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:9px 18px;font-size:13px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--gnd);border-color:var(--gn);color:var(--gn)}
+#toast.err{background:var(--rdd);border-color:var(--rd);color:var(--rd)}
+/* overlay for AI processing */
+.proc-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff}
+.proc-ov.open{display:flex}
+.proc-spin{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--am);border-radius:50%;animation:spin .8s linear infinite}
+.proc-lbl{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600}
+/* ── empty state ── */
+.empty{text-align:center;padding:32px 16px;color:var(--tx3);font-size:13px}
+.empty-ico{font-size:40px;margin-bottom:12px}
+/* ── loading overlay ── */
+#loadingOverlay{position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#loadingOverlay.hidden{display:none}
+.load-logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:42px;letter-spacing:4px;color:var(--am)}
+.load-sub{font-size:12px;color:var(--tx3);font-family:'Share Tech Mono',monospace;letter-spacing:2px}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loadingOverlay">
+  <div class="load-logo">💧 MetrIQ</div>
+  <div class="load-sub">CONNECTING…</div>
+  <div class="spin" style="width:24px;height:24px;border-width:3px"></div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="ll">💧 MetrIQ</div>
+  <div class="lt">Smart Water Meter Reader</div>
+  <div class="lsite" id="loginSiteName">—</div>
+
+  <div id="roleList" class="pg">
+    <div class="pc" onclick="selRole('Inspector')">
+      <div class="pi">🔦</div>
+      <div><div class="pn">Inspector</div><div class="pa">Capture meter readings</div></div>
+    </div>
+    <div class="pc" onclick="selRole('Manager')">
+      <div class="pi">📊</div>
+      <div><div class="pn">Manager</div><div class="pa">View data, analytics & reports</div></div>
+    </div>
+    <div class="pc" onclick="selRole('Admin')">
+      <div class="pi">⚙️</div>
+      <div><div class="pn">Admin</div><div class="pa">System setup & maintenance</div></div>
+    </div>
+  </div>
+
+  <div id="pinScreen">
+    <div class="ppn" id="pinRoleName"></div>
+    <div class="ppl">Enter 6-digit PIN</div>
+    <div class="pds" id="pinDots"></div>
+    <div class="pe" id="pinErr"></div>
+    <div class="pp">
+      <button class="pb" onclick="pk('1')">1</button><button class="pb" onclick="pk('2')">2</button><button class="pb" onclick="pk('3')">3</button>
+      <button class="pb" onclick="pk('4')">4</button><button class="pb" onclick="pk('5')">5</button><button class="pb" onclick="pk('6')">6</button>
+      <button class="pb" onclick="pk('7')">7</button><button class="pb" onclick="pk('8')">8</button><button class="pb" onclick="pk('9')">9</button>
+      <button class="pb emp"></button><button class="pb" onclick="pk('0')">0</button><button class="pb del" onclick="pdel()">⌫</button>
+    </div>
+    <button class="pbk" onclick="backToRoles()">← Back</button>
+  </div>
+
+  <div id="beStatus" class="be-status" style="display:none"></div>
+  <div class="lver">MetrIQ MVP v1</div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" style="display:none">
+  <div id="hdr">
+    <div class="logo">💧 MetrIQ<span style="display:block;font-family:'Share Tech Mono',monospace;font-size:9px;font-weight:400;letter-spacing:1px;color:var(--tx3);margin-top:-2px">MVP v1</span></div>
+    <div class="hc">
+      <div class="hp" id="hdrSite"></div>
+      <div class="hu" id="hdrUser"></div>
+    </div>
+    <div class="hdrbadge">
+      <div class="sync-badge" id="syncBadge" onclick="syncPending()">⟳ <span id="syncCount">0</span></div>
+      <button class="sochip" onclick="logout()">🔒 Out</button>
+    </div>
+  </div>
+
+  <div id="screens">
+    <!-- ─── DASHBOARD (Inspector) ─── -->
+    <div class="screen active" id="screen-dash">
+      <button class="usb" id="meterSelectorBtn" onclick="openMeterPicker()">
+        <div class="usb-ico">💧</div>
+        <div style="flex:1;min-width:0"><div class="usb-num" id="usbLabel">Select meter…</div><div class="usb-desc" id="usbLoc">Tap to choose</div></div>
+        <div class="usb-meta"><div class="usb-cnt" id="usbStatus"></div><div class="usb-arr">▾</div></div>
+      </button>
+      <div class="card">
+        <div class="clbl">Latest Reading</div>
+        <div class="dnum" id="dNum">— — —</div>
+        <div class="dunit" id="dUnit">m³ · Select a meter above</div>
+        <div class="ddate" id="dDate"></div>
+      </div>
+      <div class="srow">
+        <div class="sc"><div class="clbl">This Month</div><div class="sv" id="sMo">—</div><div class="sl">m³</div></div>
+        <div class="sc"><div class="clbl">Avg/Day</div><div class="sv" id="sAv">—</div><div class="sl">m³/day</div></div>
+        <div class="sc"><div class="clbl">Readings</div><div class="sv" id="sCt">0</div><div class="sl">total</div></div>
+      </div>
+      <div id="trendBanner"></div>
+      <div class="card">
+        <div class="stitle">Consumption Trend</div>
+        <div class="cw" style="margin-top:10px"><canvas id="miniChart"></canvas></div>
+      </div>
+      <button class="fab" id="captureBtn" onclick="startCapture()"><span style="font-size:19px">📷</span> CAPTURE READING</button>
+    </div>
+
+    <!-- ─── OVERVIEW (Manager/Admin) ─── -->
+    <div class="screen" id="screen-overview">
+      <div class="card ov-progress">
+        <div class="clbl">Monthly Completion</div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-top:6px">
+          <div class="ov-pct" id="ovPct">0%</div>
+          <div class="ov-sub" id="ovSub">of 0 meters read</div>
+        </div>
+        <div class="pbar-wrap"><div class="pbar" id="ovBar" style="width:0%"></div></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--tx3)" id="ovMonth"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="clbl" style="flex:1">All Meters</div>
+        <select class="fi" id="ovMonthSel" style="width:auto;font-size:12px;padding:6px 10px" onchange="loadOverview()"></select>
+      </div>
+      <div class="meter-grid" id="meterGrid"></div>
+    </div>
+
+    <!-- ─── CAPTURE ─── -->
+    <div class="screen" id="screen-capture">
+      <div><div class="sbar" id="stepBar"></div><div style="height:5px"></div><div class="stit" id="stepTitle">—</div><div class="ssub" id="stepSub">—</div></div>
+      <div id="capContent" style="flex:1"></div>
+      <div class="brow"><button class="btn btg" id="btnBack" onclick="capBack()">Back</button><button class="btn btp" id="btnNext" onclick="capNext()">Continue</button></div>
+    </div>
+
+    <!-- ─── HISTORY ─── -->
+    <div class="screen" id="screen-history">
+      <button class="usb" onclick="openMeterPicker(true)">
+        <div class="usb-ico">💧</div>
+        <div style="flex:1;min-width:0"><div class="usb-num" id="histLabel">Select meter…</div><div class="usb-desc" id="histLoc">Tap to choose</div></div>
+        <div class="usb-meta"><div class="usb-arr">▾</div></div>
+      </button>
+      <div id="histList" class="empty"><div class="empty-ico">📋</div>Select a meter to view its history</div>
+    </div>
+
+    <!-- ─── ANALYTICS ─── -->
+    <div class="screen" id="screen-analytics">
+      <div class="anl-scope">
+        <button class="anl-scope-btn active" id="anlAll" onclick="setAnlScope('all')">All Meters</button>
+        <button class="anl-scope-btn" id="anlOne" onclick="setAnlScope('one')">Single Meter</button>
+      </div>
+      <div id="anlMeterRow" style="display:none">
+        <button class="usb" onclick="openMeterPicker(true)">
+          <div class="usb-ico">💧</div>
+          <div style="flex:1;min-width:0"><div class="usb-num" id="anlLabel">Select meter…</div><div class="usb-desc" id="anlLoc">Tap to choose</div></div>
+          <div class="usb-meta"><div class="usb-arr">▾</div></div>
+        </button>
+      </div>
+      <div class="ytd-card" id="ytdCard"></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="clbl">Monthly Consumption</div>
+          <select class="fi" id="anlYearSel" style="width:auto;font-size:12px;padding:5px 8px" onchange="renderAnalytics()"></select>
+        </div>
+        <div class="cw" style="height:220px"><canvas id="anlChart"></canvas></div>
+      </div>
+      <div class="card"><div class="clbl" style="margin-bottom:8px">Insights</div><div id="anlInsights"></div></div>
+    </div>
+
+    <!-- ─── SETTINGS ─── -->
+    <div class="screen" id="screen-settings">
+      <!-- Appearance — all roles -->
+      <div class="card">
+        <div class="stitle">Appearance</div>
+        <div class="si"><div><div class="slbl">Dark Theme</div></div><button class="tog on" id="themeToggle" onclick="toggleTheme()"></button></div>
+        <div class="si" style="flex-direction:column;align-items:flex-start;gap:8px;border-bottom:none;padding-bottom:0">
+          <div><div class="slbl">Font Size</div></div>
+          <div class="sw wf"><span style="font-size:12px">A</span><input type="range" id="fontSlider" min="1" max="4" step="1" value="1" oninput="applyFont(parseInt(this.value))"><span style="font-size:17px">A</span><span class="swv" id="fontLbl">100%</span></div>
+        </div>
+      </div>
+
+      <!-- AI Provider — all roles -->
+      <div class="card">
+        <div class="stitle">AI Provider</div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Provider</div>
+          <select class="fi" id="aiProv" onchange="onProvChange()">
+            <option value="groq">⚡ Groq — Llama 4 Vision (Free)</option>
+            <option value="gemini">🔵 Gemini Flash (Free)</option>
+            <option value="openrouter">🔀 OpenRouter (Free)</option>
+            <option value="claude">🟠 Claude (Paid)</option>
+            <option value="none">✏️ None — Manual</option>
+          </select>
+        </div>
+        <div id="gGroq" class="fg" style="margin-bottom:11px"><div class="fl">Groq API Key</div><input class="fi ft" type="password" id="groqKey" placeholder="gsk_…"><div class="fhint">Free at <strong style="color:var(--am)">console.groq.com</strong></div></div>
+        <div id="gGemini" class="fg" style="display:none;margin-bottom:11px"><div class="fl">Gemini API Key</div><input class="fi ft" type="password" id="gemKey" placeholder="AIza…"><div class="fhint">Free at <strong style="color:var(--am)">aistudio.google.com</strong></div></div>
+        <div id="gOR" class="fg" style="display:none;margin-bottom:11px"><div class="fl">OpenRouter Key</div><input class="fi ft" type="password" id="orKey" placeholder="sk-or-…"></div>
+        <div id="gClaude" class="fg" style="display:none;margin-bottom:11px"><div class="fl">Claude Key</div><input class="fi ft" type="password" id="claKey" placeholder="sk-ant-…"></div>
+        <button class="btn btg wf" onclick="saveAISettings()">Save AI Settings</button>
+      </div>
+
+      <!-- Telegram — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Telegram Alerts</div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Bot Token</div><input class="fi ft" type="password" id="tgToken" placeholder="7123456789:AAF…"><div class="fhint">From <strong style="color:var(--am)">@BotFather</strong></div></div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Group Chat ID</div><input class="fi ft" type="text" id="tgChatId" placeholder="-1001234567890"><div class="fhint">From <strong style="color:var(--am)">@userinfobot</strong></div></div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin-bottom:9px">Alert on:</div>
+        <div class="alert-opts">
+          <label class="alert-opt"><input type="checkbox" id="acOnSave"><div><div class="alert-opt-lbl">Every reading saved</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnCritical" checked><div><div class="alert-opt-lbl">🔴 Critical anomaly</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnHigh" checked><div><div class="alert-opt-lbl">🟡 Elevated usage</div></div></label>
+          <label class="alert-opt"><input type="checkbox" id="acOnCompletion" checked><div><div class="alert-opt-lbl">✅ Monthly completion</div><div class="alert-opt-sub">When all meters are read</div></div></label>
+        </div>
+        <div class="brow" style="margin-top:11px">
+          <button class="btn btg" style="flex:1" onclick="testTelegram()">Test</button>
+          <button class="btn btp" style="flex:1" onclick="saveTelegram()">Save</button>
+        </div>
+      </div>
+
+      <!-- EmailJS — Admin -->
+      <div class="card admin-only">
+        <div class="stitle">EmailJS Reports</div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Service ID</div><input class="fi ft" id="ejsService" placeholder="service_xxxxxxx"></div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Template ID</div><input class="fi ft" id="ejsTemplate" placeholder="template_xxxxxxx"></div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Public Key</div><input class="fi ft" id="ejsKey" placeholder="XXXXXXXXXXXXXXXX"></div>
+        <div class="quota-wrap">
+          <div class="quota-lbl">Emails sent this month: <strong id="quotaUsed">—</strong> / 200 free</div>
+          <div class="quota-bar-bg"><div class="quota-bar-fg" id="quotaBar" style="width:0%"></div></div>
+        </div>
+        <div class="brow" style="margin-top:11px">
+          <button class="btn btg" style="flex:1" onclick="testEmail()">Test Email</button>
+          <button class="btn btp" style="flex:1" onclick="saveEmailJS()">Save</button>
+        </div>
+      </div>
+
+      <!-- Backend — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Backend (Google Apps Script)</div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Web App URL</div><input class="fi ft" id="backendUrl" placeholder="https://script.google.com/macros/s/…/exec"></div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">API Key</div><input class="fi ft" type="password" id="apiKey" placeholder="From Config sheet"></div>
+        <div class="fg" style="margin-bottom:11px"><div class="fl">Site Name</div><input class="fi ft" id="siteName" placeholder="e.g. Block 5A"></div>
+        <div class="brow">
+          <button class="btn btg" style="flex:1" onclick="testBackend()">Test Connection</button>
+          <button class="btn btp" style="flex:1" onclick="saveBackend()">Save</button>
+        </div>
+      </div>
+
+      <!-- Users — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Users</div>
+        <div id="userList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
+        <button class="btn btg wf" onclick="openAddUser()">+ Add User</button>
+      </div>
+
+      <!-- Meters — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Meters</div>
+        <div id="meterList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
+        <button class="btn btg wf" onclick="openAddMeter()">+ Add Meter</button>
+      </div>
+
+      <!-- Reports — Manager + Admin -->
+      <div class="card manager-only">
+        <div class="stitle">Reports</div>
+        <div class="si">
+          <div><div class="slbl">Monthly Report</div><div class="ssub">HTML email to recipients</div></div>
+          <button class="btn btg" style="padding:6px 11px;font-size:12px;flex:0" onclick="openReportModal()">Send</button>
+        </div>
+        <div class="si" style="border-bottom:none">
+          <div><div class="slbl">Save As Copy</div><div class="ssub">Duplicate sheet for offline use</div></div>
+          <button class="btn btg" style="padding:6px 11px;font-size:12px;flex:0" onclick="saveAsCopy()">Copy</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:12px;color:var(--tx3);font-size:11px">MetrIQ MVP v1 · Water Meter Management<br><span style="color:var(--am)">Groq · Gemini · Claude Vision AI</span></div>
+    </div>
+  </div>
+
+  <nav id="nav">
+    <button class="nb active" id="nav-dash"     onclick="go('dash')">     <span class="ni">🏠</span>Home</button>
+    <button class="nb hidden" id="nav-overview"  onclick="go('overview')"> <span class="ni">📋</span>Overview</button>
+    <button class="nb"        id="nav-capture"   onclick="startCapture()"> <span class="ni">📷</span>Capture</button>
+    <button class="nb"        id="nav-history"   onclick="go('history')">  <span class="ni">📅</span>History</button>
+    <button class="nb"        id="nav-analytics" onclick="go('analytics')"><span class="ni">📊</span>Analytics</button>
+    <button class="nb"        id="nav-settings"  onclick="go('settings')"> <span class="ni">⚙️</span>Settings</button>
+  </nav>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<div class="ov" id="mMeterPicker">
+  <div class="modal">
+    <div class="mh"></div>
+    <div class="mt">Select Meter</div>
+    <input type="search" class="usrch" id="meterSearch" placeholder="🔍  Search meters…" oninput="filterMeterPicker()">
+    <div class="upl" id="meterPickerList"></div>
+  </div>
+</div>
+
+<div class="ov" id="mAddMeter">
+  <div class="modal"><div class="mh"></div><div class="mt">Add Meter</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><div class="fl">Meter Label</div><input class="fi ft" id="nmLabel" placeholder="e.g. #01-23 or Meter A1" maxlength="30"></div>
+      <div class="fg"><div class="fl">Location</div><input class="fi" id="nmLoc" placeholder="e.g. Ground Floor" maxlength="40"></div>
+      <div class="fg"><div class="fl">Floor / Block</div><input class="fi" id="nmFloor" placeholder="e.g. B1" maxlength="20"></div>
+      <div class="brow"><button class="btn btg" onclick="closeM('mAddMeter')">Cancel</button><button class="btn btp" onclick="addMeter()">Add Meter</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="mEditMeter">
+  <div class="modal"><div class="mh"></div><div class="mt">Edit Meter</div>
+    <input type="hidden" id="editMeterId">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><div class="fl">Meter Label</div><input class="fi ft" id="editMLabel" maxlength="30"></div>
+      <div class="fg"><div class="fl">Location</div><input class="fi" id="editMLoc" maxlength="40"></div>
+      <div class="fg"><div class="fl">Floor / Block</div><input class="fi" id="editMFloor" maxlength="20"></div>
+      <div class="brow">
+        <button class="btn btd" onclick="deleteMeterConfirm()" style="flex:0;padding:13px 16px">🗑</button>
+        <button class="btn btg" onclick="closeM('mEditMeter')">Cancel</button>
+        <button class="btn btp" onclick="saveMeterEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="mAddUser">
+  <div class="modal"><div class="mh"></div><div class="mt">Add User</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><div class="fl">Name</div><input class="fi" id="nuName" placeholder="Full name" maxlength="40"></div>
+      <div class="fg"><div class="fl">Role</div>
+        <select class="fi" id="nuRole">
+          <option value="Inspector">Inspector</option>
+          <option value="Manager">Manager</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div class="fg"><div class="fl">6-Digit PIN</div><input class="fi ft" type="password" id="nuPin" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
+      <div class="fg"><div class="fl">Email (for reports)</div><input class="fi" type="email" id="nuEmail" placeholder="name@example.com"></div>
+      <div class="fg"><div class="fl">Telegram Chat ID (optional)</div><input class="fi ft" id="nuTgId" placeholder="987654321" inputmode="numeric"></div>
+      <div class="brow"><button class="btn btg" onclick="closeM('mAddUser')">Cancel</button><button class="btn btp" onclick="addUser()">Add User</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="mDetail">
+  <div class="modal"><div class="mh"></div><div id="detailContent"></div></div>
+</div>
+
+<div class="ov" id="mReport">
+  <div class="modal"><div class="mh"></div><div class="mt">Send Monthly Report</div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div class="fg"><div class="fl">Month</div><select class="fi" id="rptMonth"></select></div>
+      <div class="fg"><div class="fl">Recipient Email(s)</div><input class="fi" type="email" id="rptEmail" placeholder="manager@example.com, admin@example.com"></div>
+      <div class="fg"><div class="fl">Note (optional)</div><input class="fi" id="rptNote" placeholder="Monthly water meter report"></div>
+      <div id="rptQuotaWarn" style="display:none;padding:9px 12px;border-radius:var(--rs);background:var(--yld);border:1px solid var(--yl);font-size:12px;color:var(--yl)">⚠️ EmailJS quota nearly full — <strong id="rptQuotaLeft"></strong> emails remaining</div>
+      <div class="brow">
+        <button class="btn btg" style="flex:1" onclick="closeM('mReport')">Cancel</button>
+        <button class="btn btp" style="flex:1" onclick="sendReport()">📧 Send Report</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="mAssess">
+  <div class="modal"><div class="mh"></div><div class="mt">Reading Saved ✓</div>
+    <div id="assessContent"></div>
+    <div style="height:12px"></div>
+    <button class="btn btp wf" onclick="closeM('mAssess')">Done</button>
+  </div>
+</div>
+
+<div class="proc-ov" id="procOv">
+  <div class="proc-spin"></div>
+  <div class="proc-lbl" id="procLbl">Extracting reading…</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════
+//  CONFIG / CONSTANTS
+// ═══════════════════════════════════════════
+const APP_VERSION = 'MVP v1';
+const PIN_LEN = 6;
+const FSC = [1, 1.1, 1.2, 1.35];
+const FLB = ['100%','110%','120%','135%'];
+const CAPTURE_STEPS = [
+  {t:'Select Meter',    s:'Which meter are you reading?'},
+  {t:'Capture & Read',  s:'Photo → AI extraction → verify → save'},
+];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ═══════════════════════════════════════════
+//  LOCAL STORAGE DB
+// ═══════════════════════════════════════════
+const DB = {
+  get(k){ try{ const v=localStorage.getItem('miq_'+k); return v?JSON.parse(v):null; }catch{ return null; } },
+  set(k,v){ try{ localStorage.setItem('miq_'+k,JSON.stringify(v)); }catch{} }
+};
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let S = {
+  // session
+  role: null,        // Inspector | Manager | Admin
+  user: null,        // {user_id, name, role, email, telegram_chat_id}
+
+  // settings (persisted locally)
+  backendUrl: '',
+  apiKey: '',
+  siteName: '',
+  aiProv: 'groq',
+  groqKey: '', orKey: '', gemKey: '', claKey: '',
+  dark: true, fs: 1,
+  tgToken: '', tgChatId: '',
+  alertCfg: { onSave:false, onCritical:true, onHigh:true, onCompletion:true },
+  ejsService: '', ejsTemplate: '', ejsKey: '',
+
+  // data cache (from backend)
+  meters: [],
+  readings: {},     // { month_year: [reading, ...] }
+  users: [],
+  emailQuota: { used: 0, limit: 200 },
+
+  // active selections
+  activeMeter: null,  // meter object
+  anlScope: 'all',    // 'all' | 'one'
+
+  // offline queue
+  syncQueue: [],       // pending readings to sync
+};
+
+// capture session
+let cap = {};
+// chart handles
+let CH = {};
+// PIN entry state
+let pe = '', pr = null; // pin entry, pending role
+
+// ═══════════════════════════════════════════
+//  BACKEND API
+// ═══════════════════════════════════════════
+async function api(action, params = {}) {
+  if (!S.backendUrl) throw new Error('No backend URL — configure in Admin → Settings');
+  const body = { action, apiKey: S.apiKey, ...params };
+  const res = await fetch(S.backendUrl, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Backend error');
+  return data.data;
+}
+
+async function apiSafe(action, params = {}) {
+  try { return await api(action, params); }
+  catch (e) { console.warn('API:', action, e.message); return null; }
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+async function init() {
+  // Load persisted settings
+  const keys = ['backendUrl','apiKey','siteName','aiProv','groqKey','orKey','gemKey','claKey','dark','fs','tgToken','tgChatId','alertCfg','ejsService','ejsTemplate','ejsKey'];
+  keys.forEach(k => { const v = DB.get(k); if (v !== null) S[k] = v; });
+
+  // Load offline queue
+  S.syncQueue = DB.get('syncQueue') || [];
+
+  applyTheme(S.dark);
+  applyFont(S.fs, false);
+
+  // Update login screen site name
+  document.getElementById('loginSiteName').textContent = S.siteName || '—';
+
+  // Try to restore session
+  const sess = sessionStorage.getItem('miq_session');
+  if (sess) {
+    try {
+      const { role, user } = JSON.parse(sess);
+      S.role = role; S.user = user;
+      await afterLogin();
+      return;
+    } catch {}
+  }
+
+  // Check backend connectivity
+  if (S.backendUrl) {
+    try {
+      const r = await fetch(S.backendUrl);
+      const d = await r.json();
+      showBeStatus(d.ok ? 'ok' : 'err', d.ok ? '● Backend connected' : '✕ Backend error');
+    } catch {
+      showBeStatus('err', '✕ Backend unreachable');
+    }
+  }
+
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+function showBeStatus(type, msg) {
+  const el = document.getElementById('beStatus');
+  el.style.display = '';
+  el.className = 'be-status ' + type;
+  el.textContent = msg;
+}
+
+// ═══════════════════════════════════════════
+//  LOGIN / PIN FLOW
+// ═══════════════════════════════════════════
+function selRole(role) {
+  pr = role;
+  pe = '';
+  buildPinDots();
+  document.getElementById('pinRoleName').textContent =
+    role === 'Inspector' ? '🔦 Inspector' :
+    role === 'Manager' ? '📊 Manager' : '⚙️ Admin';
+  document.getElementById('pinErr').textContent = '';
+  document.getElementById('roleList').style.display = 'none';
+  document.getElementById('pinScreen').classList.add('show');
+}
+function backToRoles() {
+  pe = ''; pr = null; buildPinDots();
+  document.getElementById('roleList').style.display = 'flex';
+  document.getElementById('pinScreen').classList.remove('show');
+}
+function buildPinDots() {
+  let html = '';
+  for (let i = 0; i < PIN_LEN; i++) html += `<div class="pd" id="pd${i}"></div>`;
+  document.getElementById('pinDots').innerHTML = html;
+}
+function pk(d) {
+  if (pe.length >= PIN_LEN) return;
+  pe += d; updDots();
+  if (pe.length === PIN_LEN) setTimeout(chkPin, 120);
+}
+function pdel() {
+  pe = pe.slice(0,-1); updDots();
+  document.getElementById('pinErr').textContent = '';
+}
+function updDots(st='') {
+  for (let i = 0; i < PIN_LEN; i++) {
+    const d = document.getElementById('pd'+i);
+    if (!d) continue;
+    d.classList.toggle('on', i < pe.length);
+    d.classList.toggle('err', st==='err' && i < pe.length);
+  }
+}
+async function chkPin() {
+  if (!S.backendUrl) {
+    // Offline mode: check local users cache
+    const localUsers = DB.get('users_cache') || [];
+    const hash = simpleHash(pe);
+    const user = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
+    if (user) { S.role = pr; S.user = user; await afterLogin(); return; }
+    pinFail();
+    return;
+  }
+  try {
+    const result = await api('verifyPin', { role: pr, pin: pe });
+    if (result.valid) {
+      S.role = pr; S.user = result.user;
+      await afterLogin();
+    } else { pinFail(); }
+  } catch (e) {
+    // Fallback to local cache
+    const localUsers = DB.get('users_cache') || [];
+    const hash = simpleHash(pe);
+    const user = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
+    if (user) { S.role = pr; S.user = user; await afterLogin(); return; }
+    toast('Backend error: ' + e.message, 'err');
+    pinFail();
+  }
+}
+function pinFail() {
+  updDots('err');
+  document.getElementById('pinErr').textContent = 'Incorrect PIN';
+  setTimeout(() => { pe=''; updDots(); document.getElementById('pinErr').textContent=''; }, 1300);
+}
+// Simple local hash for offline fallback
+function simpleHash(s) {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    const char = s.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'sh_' + Math.abs(hash).toString(16);
+}
+
+// ═══════════════════════════════════════════
+//  AFTER LOGIN
+// ═══════════════════════════════════════════
+async function afterLogin() {
+  sessionStorage.setItem('miq_session', JSON.stringify({ role: S.role, user: S.user }));
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').style.display = 'flex';
+
+  // Header
+  document.getElementById('hdrSite').textContent = S.siteName || 'MetrIQ Site';
+  document.getElementById('hdrUser').textContent = (S.user?.name || S.role) + ' · ' + S.role;
+
+  // Nav visibility by role
+  setupNavForRole();
+
+  // Load meters from backend/cache
+  await loadMeters();
+
+  // Sync pending queue
+  if (S.syncQueue.length > 0) updateSyncBadge();
+
+  // Populate settings fields
+  populateSettings();
+
+  // Role-specific init
+  if (S.role === 'Inspector') {
+    go('dash');
+    renderDashboard();
+  } else if (S.role === 'Manager' || S.role === 'Admin') {
+    go('overview');
+    await loadOverview();
+    if (S.role === 'Admin') await loadUsersCache();
+  }
+
+  // Load email quota
+  loadQuota();
+}
+
+function setupNavForRole() {
+  const role = S.role;
+  // Inspector: Home, Capture, History, Settings
+  // Manager: Overview, History, Analytics, Settings
+  // Admin: Overview, Capture, History, Analytics, Settings
+  document.getElementById('nav-dash').classList.toggle('hidden', role !== 'Inspector');
+  document.getElementById('nav-overview').classList.toggle('hidden', role === 'Inspector');
+  document.getElementById('nav-capture').classList.toggle('hidden', role === 'Manager');
+  document.getElementById('nav-history').classList.remove('hidden');
+  document.getElementById('nav-analytics').classList.toggle('hidden', role === 'Inspector');
+  document.getElementById('nav-settings').classList.remove('hidden');
+
+  // Admin/Manager-only sections in settings
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = role === 'Admin' ? '' : 'none';
+  });
+  document.querySelectorAll('.manager-only').forEach(el => {
+    el.style.display = (role === 'Manager' || role === 'Admin') ? '' : 'none';
+  });
+}
+
+function logout() {
+  sessionStorage.removeItem('miq_session');
+  S.role = null; S.user = null; S.meters = []; S.readings = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').classList.remove('hidden');
+  pe = ''; pr = null; buildPinDots();
+  backToRoles();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════
+//  SCREEN NAVIGATION
+// ═══════════════════════════════════════════
+function go(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen)?.classList.add('active');
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nav-' + screen);
+  if (nb) nb.classList.add('active');
+
+  if (screen === 'overview') loadOverview();
+  if (screen === 'analytics') renderAnalytics();
+  if (screen === 'history') renderHistory();
+  if (screen === 'settings') { renderUserList(); renderMeterSettingsList(); loadQuota(); }
+}
+
+// ═══════════════════════════════════════════
+//  DATA LOADING
+// ═══════════════════════════════════════════
+async function loadMeters() {
+  try {
+    const meters = await api('getMeters');
+    S.meters = meters || [];
+    DB.set('meters_cache', S.meters);
+  } catch {
+    // Use cache
+    S.meters = DB.get('meters_cache') || [];
+  }
+  updateMeterSelector();
+}
+
+async function loadReadingsForMonth(monthYear) {
+  if (S.readings[monthYear]) return S.readings[monthYear];
+  try {
+    const data = await api('getReadings', { month_year: monthYear });
+    S.readings[monthYear] = data || [];
+    return S.readings[monthYear];
+  } catch {
+    return DB.get('readings_' + monthYear) || [];
+  }
+}
+
+async function loadUsersCache() {
+  try {
+    const users = await api('getUsers');
+    S.users = users || [];
+    DB.set('users_cache', S.users);
+    renderUserList();
+  } catch {
+    S.users = DB.get('users_cache') || [];
+    renderUserList();
+  }
+}
+
+async function loadQuota() {
+  try {
+    const cfg = await api('getConfig');
+    const used = parseInt(cfg?.email_quota_used || '0', 10);
+    const month = cfg?.email_quota_month || '';
+    const now = new Date();
+    const curMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    const actualUsed = month === curMonth ? used : 0;
+    S.emailQuota = { used: actualUsed, limit: 200 };
+    updateQuotaUI();
+    // Save site name from config
+    if (cfg?.site_name && cfg.site_name !== 'My Site') {
+      S.siteName = cfg.site_name;
+      DB.set('siteName', S.siteName);
+      document.getElementById('hdrSite').textContent = S.siteName;
+    }
+  } catch {}
+}
+
+function updateQuotaUI() {
+  const { used, limit } = S.emailQuota;
+  const pct = Math.min(100, Math.round(used / limit * 100));
+  document.getElementById('quotaUsed').textContent = used;
+  const bar = document.getElementById('quotaBar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.className = 'quota-bar-fg' + (pct >= 90 ? ' crit' : pct >= 70 ? ' warn' : '');
+  }
+}
+
+function curMonthYear() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function formatMonthYear(my) {
+  if (!my) return '';
+  const [y,m] = my.split('-');
+  return MONTHS[parseInt(m,10)-1] + ' ' + y;
+}
+function getMonthOptions(count=12) {
+  const opts = [];
+  const d = new Date();
+  for (let i = 0; i < count; i++) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    opts.push(y + '-' + m);
+    d.setMonth(d.getMonth()-1);
+  }
+  return opts;
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+function updateMeterSelector() {
+  const m = S.activeMeter;
+  if (m) {
+    document.getElementById('usbLabel').textContent = m.label;
+    document.getElementById('usbLoc').textContent = m.location + (m.floor ? ' · ' + m.floor : '');
+  } else {
+    document.getElementById('usbLabel').textContent = 'Select meter…';
+    document.getElementById('usbLoc').textContent = S.meters.length ? 'Tap to choose' : 'No meters yet';
+  }
+}
+
+async function renderDashboard() {
+  const m = S.activeMeter;
+  if (!m) {
+    document.getElementById('dNum').textContent = '— — —';
+    document.getElementById('dUnit').textContent = 'Select a meter above';
+    document.getElementById('dDate').textContent = '';
+    document.getElementById('sMo').textContent = '—';
+    document.getElementById('sAv').textContent = '—';
+    document.getElementById('sCt').textContent = '0';
+    document.getElementById('trendBanner').innerHTML = '';
+    updateMiniChart([]);
+    return;
+  }
+
+  // Load all readings for this meter
+  const allReadings = await getMeterReadings(m.meter_id);
+
+  document.getElementById('sCt').textContent = allReadings.length;
+
+  if (!allReadings.length) {
+    document.getElementById('dNum').textContent = '— — —';
+    document.getElementById('dUnit').textContent = 'm³ · No readings yet';
+    document.getElementById('dDate').textContent = '';
+    document.getElementById('sMo').textContent = '—';
+    document.getElementById('sAv').textContent = '—';
+    document.getElementById('trendBanner').innerHTML = '';
+    updateMiniChart([]);
+    return;
+  }
+
+  const sorted = [...allReadings].sort((a,b) => a.reading_date.localeCompare(b.reading_date));
+  const last = sorted[sorted.length-1];
+  document.getElementById('dNum').textContent = fNum(last.reading_value, 2);
+  document.getElementById('dUnit').textContent = 'm³ · ' + m.label;
+  document.getElementById('dDate').textContent = fDate(last.reading_date);
+
+  // This month consumption
+  const cur = curMonthYear();
+  const thisMo = sorted.filter(r => r.month_year === cur);
+  if (thisMo.length >= 2) {
+    const delta = parseFloat(thisMo[thisMo.length-1].reading_value) - parseFloat(thisMo[0].reading_value);
+    document.getElementById('sMo').textContent = fNum(delta, 2);
+    const days = Math.max(1, daysBetween(thisMo[0].reading_date, thisMo[thisMo.length-1].reading_date));
+    document.getElementById('sAv').textContent = fNum(delta/days, 2);
+  } else {
+    document.getElementById('sMo').textContent = '—';
+    document.getElementById('sAv').textContent = '—';
+  }
+
+  // Trend
+  const tr = assessTrend(sorted);
+  document.getElementById('trendBanner').innerHTML = tr
+    ? `<div class="tbadge ${tr.cls}"><div class="tico">${tr.icon}</div><div><strong>${tr.lbl}</strong><br><span style="font-weight:400;font-size:11px">${tr.txt}</span></div></div>` : '';
+
+  // Mini chart — last 12 month readings (one per month)
+  const pts = getMonthlyPts(sorted);
+  updateMiniChart(pts.slice(-12));
+
+  // Check if already read this month
+  const thisMonthRead = allReadings.some(r => r.month_year === cur);
+  document.getElementById('usbStatus').textContent = thisMonthRead ? '✓ Read' : 'Pending';
+}
+
+async function getMeterReadings(meterId) {
+  // Collect readings across all loaded months + cache
+  const all = [];
+  const seen = new Set();
+  Object.values(S.readings).forEach(arr => {
+    arr.forEach(r => {
+      if (r.meter_id === meterId && !seen.has(r.reading_id)) {
+        all.push(r); seen.add(r.reading_id);
+      }
+    });
+  });
+  // Also check local saved readings
+  const localCache = DB.get('all_readings_' + meterId) || [];
+  localCache.forEach(r => { if (!seen.has(r.reading_id)) { all.push(r); seen.add(r.reading_id); } });
+  return all;
+}
+
+function getMonthlyPts(sorted) {
+  // One point per month_year: last reading value
+  const byMonth = {};
+  sorted.forEach(r => { byMonth[r.month_year] = r; });
+  return Object.entries(byMonth).sort((a,b) => a[0].localeCompare(b[0])).map(([my, r]) => ({
+    label: formatMonthYear(my),
+    v: parseFloat(r.reading_value) || 0
+  }));
+}
+
+// Mini sparkline chart
+function updateMiniChart(pts) {
+  if (CH.mini) { CH.mini.destroy(); CH.mini = null; }
+  const canvas = document.getElementById('miniChart');
+  if (!canvas) return;
+  if (!pts.length) return;
+  const ctx = canvas.getContext('2d');
+  CH.mini = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: pts.map(p => p.label),
+      datasets: [{ data: pts.map(p => p.v), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.1)',
+        borderWidth: 2, pointRadius: 3, tension: 0.35, fill: true }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8888a0', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8888a0', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+//  OVERVIEW (Manager / Admin)
+// ═══════════════════════════════════════════
+async function loadOverview() {
+  const sel = document.getElementById('ovMonthSel');
+  // Populate month dropdown if empty
+  if (!sel.options.length) {
+    getMonthOptions(6).forEach(my => {
+      const opt = document.createElement('option');
+      opt.value = my; opt.textContent = formatMonthYear(my);
+      sel.appendChild(opt);
+    });
+  }
+  const monthYear = sel.value || curMonthYear();
+
+  // Load readings for the month
+  const readings = await loadReadingsForMonth(monthYear);
+
+  const total = S.meters.length;
+  const readMap = {};
+  readings.forEach(r => { readMap[r.meter_id] = r; });
+  const done = Object.keys(readMap).filter(id => S.meters.find(m => m.meter_id === id)).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  document.getElementById('ovPct').textContent = pct + '%';
+  document.getElementById('ovSub').textContent = `${done} of ${total} meters read`;
+  document.getElementById('ovBar').style.width = pct + '%';
+  document.getElementById('ovMonth').textContent = formatMonthYear(monthYear);
+
+  // Meter grid
+  const grid = document.getElementById('meterGrid');
+  if (!S.meters.length) {
+    grid.innerHTML = '<div class="empty"><div class="empty-ico">💧</div>No meters configured yet</div>';
+    return;
+  }
+  grid.innerHTML = S.meters.map(m => {
+    const r = readMap[m.meter_id];
+    const done = !!r;
+    return `<div class="mg-item">
+      <div class="mg-dot ${done?'done':'pend'}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="mg-label">${m.label}</div>
+        <div style="font-size:11px;color:var(--tx3)">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+      </div>
+      <div class="mg-val">${done ? fNum(r.reading_value,2)+' m³' : 'Pending'}</div>
+      ${done ? `<div style="font-size:10px;color:var(--tx3);margin-left:4px">${fDate(r.reading_date)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Check if all done → suggest Telegram
+  if (pct === 100 && S.alertCfg.onCompletion) {
+    sendTelegramAlert(`✅ MetrIQ — All ${total} meters read for ${formatMonthYear(monthYear)}! 100% complete.`);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  METER PICKER
+// ═══════════════════════════════════════════
+let _pickerForHistory = false;
+function openMeterPicker(forHistory = false) {
+  _pickerForHistory = forHistory;
+  filterMeterPicker();
+  openM('mMeterPicker');
+}
+function filterMeterPicker() {
+  const q = document.getElementById('meterSearch').value.toLowerCase();
+  const cur = curMonthYear();
+  const readThisMonth = new Set((S.readings[cur]||[]).map(r => r.meter_id));
+
+  const items = S.meters.filter(m =>
+    !q || m.label.toLowerCase().includes(q) || (m.location||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('meterPickerList').innerHTML = items.map(m => {
+    const done = readThisMonth.has(m.meter_id);
+    const isCur = S.activeMeter?.meter_id === m.meter_id;
+    return `<div class="upi ${isCur?'cur':''}" onclick="selectMeter('${m.meter_id}')">
+      <div style="width:36px;height:36px;background:var(--sf);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💧</div>
+      <div style="flex:1;min-width:0">
+        <div class="upi-num">${m.label}</div>
+        <div class="upi-desc">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+      </div>
+      <div class="upi-done ${done?'yes':'no'}">${done?'✓ Read':'—'}</div>
+    </div>`;
+  }).join('') || '<div class="empty">No meters found</div>';
+}
+function selectMeter(meterId) {
+  const m = S.meters.find(x => x.meter_id === meterId);
+  if (!m) return;
+  S.activeMeter = m;
+  closeM('mMeterPicker');
+  updateMeterSelector();
+  document.getElementById('histLabel').textContent = m.label;
+  document.getElementById('histLoc').textContent = m.location||'';
+  document.getElementById('anlLabel').textContent = m.label;
+  document.getElementById('anlLoc').textContent = m.location||'';
+  if (_pickerForHistory) { go('history'); renderHistory(); }
+  else renderDashboard();
+}
+
+// ═══════════════════════════════════════════
+//  CAPTURE FLOW
+// ═══════════════════════════════════════════
+function startCapture() {
+  if (!S.meters.length) { toast('No meters configured yet', 'err'); return; }
+  cap = { step: 0, meterId: S.activeMeter?.meter_id || null, photo: null, croppedPhoto: null,
+          extracted: null, conf: null, notes: null, confirmed: null, manualMode: false };
+  if (S.meters.length === 1) { cap.meterId = S.meters[0].meter_id; cap.step = 1; }
+  renderCapStep();
+  go('capture');
+}
+
+function renderCapStep() {
+  const s = cap.step;
+  document.getElementById('stepTitle').textContent = CAPTURE_STEPS[s].t;
+  document.getElementById('stepSub').textContent = CAPTURE_STEPS[s].s;
+
+  let bar = '';
+  CAPTURE_STEPS.forEach((_,i) => {
+    if (i>0) bar += '<div class="sline"></div>';
+    bar += `<div class="sdot ${i<s?'done':i===s?'cur':''}"></div>`;
+  });
+  document.getElementById('stepBar').innerHTML = bar;
+  document.getElementById('btnBack').style.display = s===0 ? 'none' : '';
+  document.getElementById('btnNext').textContent = s===CAPTURE_STEPS.length-1 ? 'Save Reading' : 'Continue';
+  document.getElementById('btnNext').disabled = false;
+
+  const c = document.getElementById('capContent');
+
+  if (s === 0) {
+    // Meter selection
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">${S.meters.map(m => {
+      const cur = curMonthYear();
+      const read = (S.readings[cur]||[]).some(r=>r.meter_id===m.meter_id);
+      const sel = cap.meterId===m.meter_id ? 'border-color:var(--am);background:var(--amg)' : '';
+      return `<div class="card" style="cursor:pointer;${sel}" onclick="capSelMeter('${m.meter_id}')">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="font-size:22px;width:38px;height:38px;background:var(--sf2);border-radius:8px;display:flex;align-items:center;justify-content:center">💧</div>
+          <div style="flex:1">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700">${m.label}</div>
+            <div style="font-size:12px;color:var(--tx2)">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+          </div>
+          ${read ? '<div style="font-size:11px;color:var(--gn);font-family:\'Share Tech Mono\',monospace">✓ Read</div>' : ''}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+
+  } else if (s === 1) {
+    const hasPhoto = !!cap.photo;
+
+    if (!hasPhoto && !cap.manualMode) {
+      // Entry mode selection
+      c.innerHTML = `
+        <div class="entry-modes">
+          <button class="entry-btn" onclick="tCam()"><span class="eico">📷</span>Camera</button>
+          <button class="entry-btn" onclick="tFile()"><span class="eico">🖼️</span>Gallery</button>
+          <button class="entry-btn" onclick="startManual()"><span class="eico">✏️</span>Manual</button>
+        </div>
+        <input type="file" id="fInp" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
+        <input type="file" id="gInp" accept="image/*" style="display:none" onchange="onFile(this)">
+        <div style="font-size:12px;color:var(--tx3);text-align:center;padding-top:8px">Take or upload a clear photo of the meter display</div>`;
+    } else if (cap.manualMode) {
+      c.innerHTML = `
+        <div class="card">
+          <div class="clbl" style="margin-bottom:8px">Enter reading manually</div>
+          <input class="manual-inp" type="number" id="manualVal" inputmode="decimal" placeholder="0.00"
+            step="0.01" value="${cap.confirmed||''}" onchange="cap.confirmed=this.value">
+        </div>
+        <button class="btn btg wf" style="margin-top:4px" onclick="cap.manualMode=false;cap.photo=null;renderCapStep()">← Use Camera Instead</button>`;
+    } else {
+      // Has photo — show crop + extract UI
+      c.innerHTML = `
+        <div class="prev-wrap">
+          <img id="prevImg" src="${cap.photo}" style="max-height:200px;width:100%;object-fit:contain">
+          <button class="prev-retake" onclick="retakePhoto()">↺ Retake</button>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--tx2)">Tap & drag to crop the meter display area (optional)</div>
+        <canvas id="cropCanvas" style="margin-top:8px;border-radius:var(--rs);width:100%;background:var(--sf2);max-height:200px"></canvas>
+        <div class="crop-hint">Drag to select meter digits area · Double-tap to reset</div>
+        <button class="btn btp wf" style="margin-top:10px" id="btnExtract" onclick="doExtractCropped()">🤖 Extract Reading</button>
+        <div id="extBox" style="display:none" class="extbox"></div>
+        <div id="confirmZone" style="display:none"></div>`;
+
+      setTimeout(() => initCropCanvas(), 50);
+    }
+  }
+}
+
+function capSelMeter(id) {
+  cap.meterId = id;
+  document.querySelectorAll('#capContent .card').forEach(el => {
+    el.style.borderColor = '';
+    el.style.background = '';
+  });
+  event.currentTarget.style.borderColor = 'var(--am)';
+  event.currentTarget.style.background = 'var(--amg)';
+}
+function capBack() {
+  if (cap.step > 0) { cap.step--; cap.photo=null; cap.extracted=null; cap.confirmed=null; cap.manualMode=false; renderCapStep(); }
+  else go(S.role==='Inspector'?'dash':'overview');
+}
+function capNext() {
+  if (cap.step === 0) {
+    if (!cap.meterId) { toast('Select a meter', 'err'); return; }
+    cap.step = 1; renderCapStep();
+  } else if (cap.step === 1) {
+    if (!cap.confirmed && cap.confirmed !== 0) { toast('Reading not confirmed yet', 'err'); return; }
+    saveCapture();
+  }
+}
+function tCam() { document.getElementById('fInp').click(); }
+function tFile() { document.getElementById('gInp').click(); }
+function startManual() { cap.manualMode = true; renderCapStep(); }
+function retakePhoto() { cap.photo = null; cap.extracted = null; cap.confirmed = null; renderCapStep(); }
+
+function onFile(input) {
+  const f = input.files?.[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => { cap.photo = e.target.result; renderCapStep(); };
+  reader.readAsDataURL(f);
+}
+
+// ── Crop canvas ──
+let cropState = { dragging: false, startX: 0, startY: 0, rect: null, imgNat: null };
+function initCropCanvas() {
+  const canvas = document.getElementById('cropCanvas');
+  if (!canvas) return;
+  const img = new Image();
+  img.onload = () => {
+    cropState.imgNat = img;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    drawCrop();
+  };
+  img.src = cap.photo;
+
+  canvas.addEventListener('mousedown', cropStart);
+  canvas.addEventListener('mousemove', cropMove);
+  canvas.addEventListener('mouseup', cropEnd);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); const t=e.touches[0]; cropStart({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top}); }, {passive:false});
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); const t=e.touches[0]; cropMove({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top}); }, {passive:false});
+  canvas.addEventListener('touchend', cropEnd, {passive:false});
+  canvas.addEventListener('dblclick', () => { cropState.rect=null; drawCrop(); });
+}
+function toNatural(canvas, x, y) {
+  const scale = canvas.width / canvas.clientWidth;
+  return [x * scale, y * scale];
+}
+function cropStart(e) {
+  const canvas = document.getElementById('cropCanvas');
+  const [nx,ny] = toNatural(canvas, e.offsetX, e.offsetY);
+  cropState.dragging = true;
+  cropState.startX = nx; cropState.startY = ny;
+  cropState.rect = null;
+}
+function cropMove(e) {
+  if (!cropState.dragging) return;
+  const canvas = document.getElementById('cropCanvas');
+  const [nx,ny] = toNatural(canvas, e.offsetX, e.offsetY);
+  cropState.rect = { x: Math.min(cropState.startX,nx), y: Math.min(cropState.startY,ny),
+    w: Math.abs(nx-cropState.startX), h: Math.abs(ny-cropState.startY) };
+  drawCrop();
+}
+function cropEnd() { cropState.dragging = false; }
+function drawCrop() {
+  const canvas = document.getElementById('cropCanvas');
+  if (!canvas || !cropState.imgNat) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(cropState.imgNat, 0, 0);
+  const r = cropState.rect;
+  if (r && r.w > 5 && r.h > 5) {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(r.x,r.y,r.w,r.h);
+    ctx.drawImage(cropState.imgNat, r.x,r.y,r.w,r.h, r.x,r.y,r.w,r.h);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(r.x,r.y,r.w,r.h);
+  }
+}
+function getCroppedDataUrl() {
+  const r = cropState.rect;
+  const img = cropState.imgNat;
+  if (!r || !img || r.w < 10 || r.h < 10) return cap.photo;
+  const cv = document.createElement('canvas');
+  cv.width = r.w; cv.height = r.h;
+  cv.getContext('2d').drawImage(img, r.x,r.y,r.w,r.h, 0,0,r.w,r.h);
+  return cv.toDataURL('image/jpeg', 0.9);
+}
+
+// ── Extraction ──
+async function doExtractCropped() {
+  const btn = document.getElementById('btnExtract');
+  if (btn) btn.disabled = true;
+  document.getElementById('extBox').style.display = '';
+  document.getElementById('extBox').innerHTML = '<div class="spin"></div> Analysing meter image…';
+  document.getElementById('confirmZone').style.display = 'none';
+  document.getElementById('btnNext').disabled = true;
+  cap.croppedPhoto = getCroppedDataUrl();
+  await doExtract(cap.croppedPhoto);
+  if (btn) btn.disabled = false;
+  setTimeout(showConfirmZone, 60);
+}
+
+async function doExtract(imageDataUrl) {
+  const prov = S.aiProv;
+  const keys = { groq: S.groqKey, openrouter: S.orKey, gemini: S.gemKey, claude: S.claKey };
+  if (prov === 'none' || !keys[prov]) { showExtManual(prov==='none'?'Manual mode':'No API key — set in Settings'); return; }
+  const src = imageDataUrl || cap.photo;
+  const b64 = src.split(',')[1];
+  const mt = src.split(';')[0].split(':')[1];
+  const prompt = `You are reading a water meter. Extract the reading from this meter photo.
+Return JSON only: {"reading":"XXXXXXX.XX","confidence":0.95,"notes":"any relevant observation"}
+The reading should be the full numeric display value in m³. Use decimal point (.) not comma.
+If you cannot read it clearly, set confidence below 0.5 and explain in notes.`;
+
+  try {
+    let parsed;
+    if (prov === 'groq' || prov === 'openrouter') {
+      const url = prov==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://openrouter.ai/api/v1/chat/completions';
+      const model = prov==='groq'?'meta-llama/llama-4-scout-17b-16e-instruct':'meta-llama/llama-3.2-11b-vision-instruct:free';
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+keys[prov]},
+        body: JSON.stringify({ model, max_tokens:300, temperature:0.05,
+          messages:[{role:'user',content:[{type:'image_url',image_url:{url:`data:${mt};base64,${b64}`}},{type:'text',text:prompt}]}]})});
+      const d = await res.json();
+      if (d.error) throw new Error(d.error.message);
+      parsed = JSON.parse(d.choices?.[0]?.message?.content.replace(/```json|```/g,'').trim()||'{}');
+    } else if (prov === 'gemini') {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.gemKey}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mt,data:b64}},{text:prompt}]}],generationConfig:{maxOutputTokens:300,temperature:0.05}})});
+      const d = await res.json();
+      if (d.error) throw new Error(d.error.message);
+      parsed = JSON.parse(d.candidates?.[0]?.content?.parts?.[0]?.text.replace(/```json|```/g,'').trim()||'{}');
+    } else if (prov === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':S.claKey,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mt,data:b64}},{type:'text',text:prompt}]}]})});
+      const d = await res.json();
+      parsed = JSON.parse(d.content?.[0]?.text.replace(/```json|```/g,'').trim()||'{}');
+    }
+    cap.extracted = parsed.reading;
+    cap.conf = typeof parsed.confidence === 'number' ? parsed.confidence : parseFloat(parsed.confidence)||0;
+    cap.notes = parsed.notes || '';
+    showExtResult();
+  } catch (err) {
+    showExtError(err.message || 'AI extraction failed');
+  }
+}
+
+function showExtResult() {
+  const conf = cap.conf || 0;
+  const confClass = conf >= 0.85 ? 'conf-hi' : conf >= 0.6 ? 'conf-md' : 'conf-lo';
+  const confLabel = conf >= 0.85 ? 'High confidence' : conf >= 0.6 ? 'Medium confidence' : 'Low confidence — verify carefully';
+  const eb = document.getElementById('extBox');
+  if (eb) {
+    eb.innerHTML = `
+      <div class="extnum">${cap.extracted || '—'}</div>
+      <div class="extconf ${confClass}">m³ · ${(conf*100).toFixed(0)}% — ${confLabel}</div>
+      ${cap.notes ? `<div style="font-size:11px;color:var(--tx3);margin-top:5px">${cap.notes}</div>` : ''}`;
+  }
+}
+function showExtManual(reason) {
+  const eb = document.getElementById('extBox');
+  if (eb) eb.innerHTML = `<div style="color:var(--tx2);font-size:13px">${reason} — enter reading below</div>`;
+  showConfirmZone();
+}
+function showExtError(msg) {
+  const eb = document.getElementById('extBox');
+  if (eb) eb.innerHTML = `<div style="color:var(--rd);font-size:12px">⚠️ ${msg}</div>`;
+  showConfirmZone();
+}
+
+function showConfirmZone() {
+  const cz = document.getElementById('confirmZone');
+  if (!cz) return;
+  cz.style.display = '';
+  const hasExt = !!cap.extracted;
+  cz.innerHTML = `
+    <div style="margin-top:10px;font-size:12px;color:var(--tx2);margin-bottom:6px">${hasExt ? 'Confirm the extracted reading:' : 'Enter the reading manually:'}</div>
+    <input class="manual-inp" type="number" id="confirmVal" inputmode="decimal" step="0.01"
+      value="${cap.extracted||''}" placeholder="0.00" oninput="cap.confirmed=this.value">
+    <div style="height:8px"></div>
+    <button class="btn btp wf" onclick="confirmReading()" style="margin-top:4px">✓ Confirm Reading</button>`;
+  document.getElementById('btnNext').disabled = false;
+}
+function confirmReading() {
+  const v = document.getElementById('confirmVal')?.value;
+  if (!v || isNaN(parseFloat(v))) { toast('Enter a valid reading', 'err'); return; }
+  cap.confirmed = v;
+  // Show save form
+  const cz = document.getElementById('confirmZone');
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toTimeString().slice(0,5);
+  cz.innerHTML = `
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="background:var(--amg);border:1px solid var(--am);border-radius:var(--rs);padding:10px 13px;text-align:center">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--num)">${cap.confirmed}</div>
+        <div style="font-size:11px;color:var(--tx2)">m³ · confirmed</div>
+      </div>
+      <div class="fg"><div class="fl">Date</div><input class="fi" type="date" id="rDate" value="${dateStr}"></div>
+      <div class="fg"><div class="fl">Time</div><input class="fi" type="time" id="rTime" value="${timeStr}"></div>
+      <div class="fg"><div class="fl">Notes (optional)</div><input class="fi" id="rNotes" placeholder="Any observations…" value="${cap.notes||''}"></div>
+    </div>`;
+  document.getElementById('btnNext').disabled = false;
+}
+
+// ── Save ──
+async function saveCapture() {
+  const date = document.getElementById('rDate')?.value;
+  const time = document.getElementById('rTime')?.value;
+  const notes = document.getElementById('rNotes')?.value || '';
+  if (!date || !time) { toast('Date and time required', 'err'); return; }
+
+  const meter = S.meters.find(m => m.meter_id === cap.meterId);
+  const monthYear = date.slice(0,7); // YYYY-MM
+
+  // Compress photo for storage (~40KB)
+  const photoThumb = await compressPhoto(cap.croppedPhoto || cap.photo);
+
+  const reading = {
+    reading_id: 'R_' + Date.now(),
+    meter_id: cap.meterId,
+    month_year: monthYear,
+    reading_value: cap.confirmed,
+    reading_date: date,
+    reading_time: time,
+    inspector_id: S.user?.user_id || '',
+    inspector_name: S.user?.name || S.role,
+    photo_b64: photoThumb,
+    ai_confidence: cap.conf || '',
+    ai_provider: cap.manualMode ? 'manual' : S.aiProv,
+    notes
+  };
+
+  // Always save locally first
+  const localKey = 'all_readings_' + cap.meterId;
+  const localReadings = DB.get(localKey) || [];
+  localReadings.push(reading);
+  DB.set(localKey, localReadings);
+
+  // Cache in session
+  if (!S.readings[monthYear]) S.readings[monthYear] = [];
+  S.readings[monthYear].push(reading);
+
+  document.getElementById('btnNext').disabled = true;
+  document.getElementById('btnNext').textContent = 'Syncing…';
+
+  // Try to sync to backend
+  let synced = false;
+  if (S.backendUrl) {
+    try {
+      await api('addReading', reading);
+      synced = true;
+    } catch (e) {
+      // Queue for later
+      S.syncQueue.push(reading);
+      DB.set('syncQueue', S.syncQueue);
+      updateSyncBadge();
+    }
+  } else {
+    S.syncQueue.push(reading);
+    DB.set('syncQueue', S.syncQueue);
+    updateSyncBadge();
+  }
+
+  // Telegram notification
+  if (S.alertCfg.onSave) {
+    const tMsg = `💧 MetrIQ — Reading Saved\n📍 ${meter?.label||''}\n📊 ${cap.confirmed} m³\n📅 ${date} ${time}\n👤 ${S.user?.name||S.role}${synced ? '\n✅ Synced' : '\n⏳ Queued (offline)'}`;
+    sendTelegramAlert(tMsg);
+  }
+
+  // Trend assessment
+  const allReadings = await getMeterReadings(cap.meterId);
+  const sorted = [...allReadings].sort((a,b) => a.reading_date.localeCompare(b.reading_date));
+  const tr = assessTrend(sorted);
+
+  if (tr && tr.lv === 'critical' && S.alertCfg.onCritical) {
+    sendTelegramAlert(`🔴 MetrIQ ALERT — ${meter?.label||''}\n${tr.lbl}: ${tr.txt}`);
+  } else if (tr && tr.lv === 'high' && S.alertCfg.onHigh) {
+    sendTelegramAlert(`🟡 MetrIQ — ${meter?.label||''}\n${tr.lbl}: ${tr.txt}`);
+  }
+
+  // Show result modal
+  document.getElementById('assessContent').innerHTML = `
+    <div style="text-align:center;padding:8px 0">
+      <div style="font-size:40px;margin-bottom:10px">💧</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--num)">${cap.confirmed} m³</div>
+      <div style="font-size:13px;color:var(--tx2);margin-top:4px">${meter?.label||'Meter'} · ${date}</div>
+      <div style="font-size:11px;color:${synced?'var(--gn)':'var(--yl)'};margin-top:8px;font-family:'Share Tech Mono',monospace">${synced?'✓ Synced to Google Sheets':'⏳ Saved locally — will sync when online'}</div>
+      ${tr ? `<div class="tbadge ${tr.cls}" style="margin-top:12px;text-align:left">${tr.icon} <strong>${tr.lbl}</strong><br><span style="font-size:11px">${tr.txt}</span></div>` : ''}
+    </div>`;
+  openM('mAssess');
+
+  // Update dashboard
+  S.activeMeter = meter || S.activeMeter;
+  renderDashboard();
+  go(S.role==='Inspector'?'dash':'overview');
+}
+
+// ── Compress photo ──
+async function compressPhoto(dataUrl) {
+  return new Promise(res => {
+    if (!dataUrl) { res(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 480;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; }
+      if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; }
+      const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      res(cv.toDataURL('image/jpeg', 0.45));
+    };
+    img.onerror = () => res(null);
+    img.src = dataUrl;
+  });
+}
+
+// ── Sync queue ──
+function updateSyncBadge() {
+  const badge = document.getElementById('syncBadge');
+  const count = S.syncQueue.length;
+  badge.classList.toggle('show', count > 0);
+  document.getElementById('syncCount').textContent = count;
+}
+async function syncPending() {
+  if (!S.backendUrl || !S.syncQueue.length) return;
+  toast('Syncing ' + S.syncQueue.length + ' readings…');
+  try {
+    const results = await api('batchSync', { readings: S.syncQueue });
+    const failed = results.filter(r => !r.ok);
+    const succeeded = results.filter(r => r.ok);
+    S.syncQueue = S.syncQueue.filter((_,i) => !succeeded.find(r => r.reading_id === S.syncQueue[i].reading_id));
+    DB.set('syncQueue', S.syncQueue);
+    updateSyncBadge();
+    toast(`✓ Synced ${succeeded.length} readings${failed.length?' · '+failed.length+' failed':''}`, 'ok');
+  } catch (e) {
+    toast('Sync failed: ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════
+async function renderHistory() {
+  const m = S.activeMeter;
+  const el = document.getElementById('histList');
+  if (!m) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div>Select a meter to view its history</div>';
+    return;
+  }
+  el.innerHTML = '<div class="empty"><div class="spin"></div> Loading…</div>';
+  const allR = await getMeterReadings(m.meter_id);
+  const sorted = [...allR].sort((a,b) => b.reading_date.localeCompare(a.reading_date));
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div>No readings for this meter yet</div>';
+    return;
+  }
+  el.innerHTML = sorted.map((r, i) => {
+    const prev = sorted[i+1];
+    const delta = prev ? parseFloat(r.reading_value) - parseFloat(prev.reading_value) : null;
+    const deltaHtml = delta !== null
+      ? `<div class="hi-delta" style="background:${delta>0?'var(--amg)':delta<0?'var(--rdd)':'var(--gnd)'};color:${delta>0?'var(--am)':delta<0?'var(--rd)':'var(--gn)'}">${delta>0?'▲':'▼'} ${Math.abs(delta).toFixed(2)} m³</div>`
+      : '';
+    const inQueue = S.syncQueue.some(q => q.reading_id === r.reading_id);
+    return `<div class="hi" onclick="openReadingDetail('${r.reading_id}')">
+      <div class="hi-top">
+        <div class="hi-num">${fNum(r.reading_value,2)} <span style="font-size:14px;font-weight:400;color:var(--tx2)">m³</span></div>
+        <div class="hi-meta">
+          ${fDate(r.reading_date)}<br>${r.reading_time||''}<br>
+          <span style="color:${inQueue?'var(--yl)':'var(--tx3)'}">${inQueue?'⏳ Pending sync':r.inspector_name||''}</span>
+        </div>
+      </div>
+      ${deltaHtml}
+      ${r.notes ? `<div style="font-size:11px;color:var(--tx3);margin-top:5px">${r.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function openReadingDetail(readingId) {
+  let r = null;
+  for (const arr of Object.values(S.readings)) {
+    r = arr.find(x => x.reading_id === readingId);
+    if (r) break;
+  }
+  if (!r) {
+    const localR = DB.get('all_readings_' + S.activeMeter?.meter_id) || [];
+    r = localR.find(x => x.reading_id === readingId);
+  }
+  if (!r) return;
+  const m = S.meters.find(m => m.meter_id === r.meter_id);
+  document.getElementById('detailContent').innerHTML = `
+    <div class="mt">${m?.label||'Meter'}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="text-align:center;padding:10px 0">
+        <div class="dnum" style="font-size:42px">${fNum(r.reading_value,2)}</div>
+        <div style="font-size:13px;color:var(--tx2)">m³ · ${fDate(r.reading_date)} ${r.reading_time||''}</div>
+      </div>
+      <div class="si"><div class="slbl">Month</div><div>${formatMonthYear(r.month_year)}</div></div>
+      <div class="si"><div class="slbl">Inspector</div><div>${r.inspector_name||'—'}</div></div>
+      <div class="si"><div class="slbl">AI Provider</div><div>${r.ai_provider||'manual'}</div></div>
+      <div class="si"><div class="slbl">Confidence</div><div>${r.ai_confidence ? (parseFloat(r.ai_confidence)*100).toFixed(0)+'%' : '—'}</div></div>
+      ${r.notes ? `<div class="si"><div class="slbl">Notes</div><div style="font-size:12px">${r.notes}</div></div>` : ''}
+      ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="display:block;padding:10px;background:var(--sf2);border-radius:var(--rs);text-align:center;color:var(--am);font-size:13px;text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600">📷 View Photo on Drive</a>` : ''}
+    </div>`;
+  openM('mDetail');
+}
+
+// ═══════════════════════════════════════════
+//  ANALYTICS
+// ═══════════════════════════════════════════
+let anlScope = 'all';
+let anlYear = new Date().getFullYear();
+
+function setAnlScope(s) {
+  anlScope = s; S.anlScope = s;
+  document.getElementById('anlAll').classList.toggle('active', s==='all');
+  document.getElementById('anlOne').classList.toggle('active', s==='one');
+  document.getElementById('anlMeterRow').style.display = s==='one' ? '' : 'none';
+  renderAnalytics();
+}
+
+async function renderAnalytics() {
+  // Populate year selector
+  const ySel = document.getElementById('anlYearSel');
+  if (!ySel.options.length) {
+    const curY = new Date().getFullYear();
+    for (let y = curY; y >= curY-3; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      ySel.appendChild(opt);
+    }
+  }
+  anlYear = parseInt(ySel.value) || new Date().getFullYear();
+
+  if (CH.anl) { CH.anl.destroy(); CH.anl = null; }
+
+  // Load all months for this year
+  const months = [];
+  const now = new Date();
+  for (let m = 1; m <= 12; m++) {
+    const my = `${anlYear}-${String(m).padStart(2,'0')}`;
+    if (anlYear < now.getFullYear() || m <= now.getMonth()+1) {
+      await loadReadingsForMonth(my);
+      months.push(my);
+    }
+  }
+
+  let datasets = [];
+  let ytdTotal = 0;
+  let ytdCount = 0;
+  let insights = '';
+
+  if (anlScope === 'all') {
+    // Sum all meters per month
+    const monthly = months.map(my => {
+      const readings = S.readings[my] || [];
+      const sum = readings.reduce((acc, r) => acc + parseFloat(r.reading_value||0), 0);
+      return { my, sum, count: readings.length };
+    });
+    ytdTotal = monthly.reduce((acc,m) => acc + m.sum, 0);
+    ytdCount = S.meters.length;
+
+    datasets = [{
+      label: 'Total m³',
+      data: monthly.map(m => m.sum || null),
+      borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.15)',
+      borderWidth: 2, tension: 0.35, fill: true, pointRadius: 4
+    }];
+
+    // Insights
+    const completed = monthly.filter(m => m.count > 0).length;
+    const avg = completed ? (ytdTotal/completed).toFixed(1) : 0;
+    insights = `<div style="font-size:12px;color:var(--tx2);line-height:1.6">
+      <strong style="color:var(--tx)">${completed} months</strong> with readings · 
+      <strong style="color:var(--num)">${ytdTotal.toFixed(1)} m³</strong> total YTD · 
+      Avg <strong style="color:var(--am)">${avg} m³/month</strong>
+    </div>`;
+
+  } else {
+    const m = S.activeMeter;
+    if (!m) {
+      document.getElementById('ytdCard').innerHTML = '<div style="color:var(--tx3);font-size:13px;grid-column:1/-1">Select a meter above</div>';
+      document.getElementById('anlInsights').innerHTML = '';
+      return;
+    }
+
+    const monthly = months.map(my => {
+      const r = (S.readings[my]||[]).find(x => x.meter_id === m.meter_id);
+      return { my, val: r ? parseFloat(r.reading_value) : null };
+    });
+
+    datasets = [{
+      label: m.label,
+      data: monthly.map(x => x.val),
+      borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)',
+      borderWidth: 2, tension: 0.35, fill: true, pointRadius: 4
+    }];
+
+    const vals = monthly.filter(x => x.val !== null).map(x => x.val);
+    ytdTotal = vals.length ? vals[vals.length-1] - vals[0] : 0;
+    ytdCount = vals.length;
+    insights = vals.length < 2 ? '<div style="color:var(--tx3);font-size:13px">Not enough data for insights</div>'
+      : `<div style="font-size:12px;color:var(--tx2);line-height:1.6"><strong style="color:var(--num)">${ytdTotal.toFixed(1)} m³</strong> consumption for ${anlYear} · ${vals.length} readings</div>`;
+  }
+
+  // YTD cards
+  document.getElementById('ytdCard').innerHTML = `
+    <div class="ytdc"><div class="ytdv">${ytdTotal.toFixed(1)}</div><div class="ytdl">m³ YTD</div></div>
+    <div class="ytdc"><div class="ytdv">${ytdCount}</div><div class="ytdl">${anlScope==='all'?'Meters':'Readings'}</div></div>`;
+
+  // Chart
+  const canvas = document.getElementById('anlChart');
+  if (canvas) {
+    CH.anl = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: months.map(my => formatMonthYear(my)),
+        datasets
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: datasets.length > 1, labels: { color: '#8888a0', boxWidth: 12 } } },
+        scales: {
+          x: { grid: { color:'rgba(255,255,255,.04)' }, ticks: { color:'#8888a0', font:{ size:10 } } },
+          y: { grid: { color:'rgba(255,255,255,.04)' }, ticks: { color:'#8888a0', font:{ size:10 } } }
+        }
+      }
+    });
+  }
+  document.getElementById('anlInsights').innerHTML = insights;
+}
+
+// ═══════════════════════════════════════════
+//  TREND ASSESSMENT
+// ═══════════════════════════════════════════
+function assessTrend(rds) {
+  if (rds.length < 4) return null;
+  const vals = rds.map(r => parseFloat(r.reading_value));
+  const diffs = [];
+  for (let i = 1; i < rds.length; i++) {
+    const days = Math.max(1, daysBetween(rds[i-1].reading_date, rds[i].reading_date));
+    const delta = vals[i] - vals[i-1];
+    if (delta >= 0) diffs.push(delta/days);
+  }
+  if (diffs.length < 3) return null;
+  const mean = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  const latest = diffs[diffs.length-1];
+  const prevMean = diffs.slice(0,-1).reduce((a,b)=>a+b,0)/diffs.slice(0,-1).length;
+  const pct = prevMean > 0 ? ((latest-prevMean)/prevMean)*100 : 0;
+  const avg = mean.toFixed(2);
+
+  if (pct > 100) return {lv:'critical',icon:'🔴',lbl:'Sudden Spike',txt:`Latest rate is ${pct.toFixed(0)}% above baseline (${avg} m³/day). Check for leak or fault.`,cls:'t-critical'};
+  if (pct < -60) return {lv:'critical',icon:'🔴',lbl:'Sudden Drop',txt:`Usage dropped ${Math.abs(pct).toFixed(0)}% — possible meter fault or supply issue.`,cls:'t-critical'};
+  if (pct > 30) return {lv:'high',icon:'🟡',lbl:'Elevated Usage',txt:`${pct.toFixed(0)}% above normal average (${avg} m³/day).`,cls:'t-high'};
+  if (pct < -40) return {lv:'low',icon:'🔵',lbl:'Below Normal',txt:`${Math.abs(pct).toFixed(0)}% below average. Verify meter.`,cls:'t-low'};
+  return {lv:'normal',icon:'🟢',lbl:'Normal',txt:`Stable at ~${avg} m³/day.`,cls:'t-normal'};
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════
+function populateSettings() {
+  const flds = { aiProv:S.aiProv, groqKey:S.groqKey, gemKey:S.gemKey, orKey:S.orKey, claKey:S.claKey,
+    tgToken:S.tgToken, tgChatId:S.tgChatId, ejsService:S.ejsService, ejsTemplate:S.ejsTemplate, ejsKey:S.ejsKey,
+    backendUrl:S.backendUrl, apiKey:S.apiKey, siteName:S.siteName };
+  Object.entries(flds).forEach(([k,v]) => { const el=document.getElementById(k); if(el) el.value=v||''; });
+  document.getElementById('fontSlider').value = S.fs;
+  document.getElementById('fontLbl').textContent = FLB[S.fs-1];
+  document.getElementById('themeToggle').classList.toggle('on', S.dark);
+  document.getElementById('acOnSave').checked = S.alertCfg.onSave;
+  document.getElementById('acOnCritical').checked = S.alertCfg.onCritical;
+  document.getElementById('acOnHigh').checked = S.alertCfg.onHigh;
+  document.getElementById('acOnCompletion').checked = S.alertCfg.onCompletion;
+  onProvChange();
+}
+
+function onProvChange() {
+  const p = document.getElementById('aiProv').value;
+  document.getElementById('gGroq').style.display   = p==='groq'?'':'none';
+  document.getElementById('gGemini').style.display = p==='gemini'?'':'none';
+  document.getElementById('gOR').style.display     = p==='openrouter'?'':'none';
+  document.getElementById('gClaude').style.display = p==='claude'?'':'none';
+}
+function saveAISettings() {
+  S.aiProv = document.getElementById('aiProv').value;
+  S.groqKey = document.getElementById('groqKey').value;
+  S.gemKey = document.getElementById('gemKey').value;
+  S.orKey = document.getElementById('orKey').value;
+  S.claKey = document.getElementById('claKey').value;
+  ['aiProv','groqKey','gemKey','orKey','claKey'].forEach(k => DB.set(k, S[k]));
+  toast('✓ AI settings saved', 'ok');
+}
+function toggleTheme() {
+  S.dark = !S.dark; DB.set('dark', S.dark); applyTheme(S.dark);
+  document.getElementById('themeToggle').classList.toggle('on', S.dark);
+}
+function applyTheme(dark) {
+  document.body.classList.toggle('light', !dark);
+  if (CH.mini) updateMiniChart._dirty = true;
+}
+function applyFont(v, save=true) {
+  S.fs = v;
+  document.documentElement.style.setProperty('--fs', FSC[v-1]);
+  document.getElementById('fontLbl').textContent = FLB[v-1];
+  if (save) DB.set('fs', v);
+}
+function saveBackend() {
+  S.backendUrl = document.getElementById('backendUrl').value.trim();
+  S.apiKey = document.getElementById('apiKey').value.trim();
+  S.siteName = document.getElementById('siteName').value.trim();
+  ['backendUrl','apiKey','siteName'].forEach(k => DB.set(k, S[k]));
+  document.getElementById('loginSiteName').textContent = S.siteName;
+  document.getElementById('hdrSite').textContent = S.siteName || 'MetrIQ Site';
+  toast('✓ Backend settings saved', 'ok');
+}
+async function testBackend() {
+  const url = document.getElementById('backendUrl').value.trim();
+  if (!url) { toast('Enter Web App URL first', 'err'); return; }
+  toast('Testing…');
+  try {
+    const res = await fetch(url);
+    const d = await res.json();
+    toast(d.ok ? '✓ Backend connected' : '✕ Error: ' + d.error, d.ok?'ok':'err');
+  } catch (e) { toast('✕ Unreachable: ' + e.message, 'err'); }
+}
+function saveTelegram() {
+  S.tgToken = document.getElementById('tgToken').value.trim();
+  S.tgChatId = document.getElementById('tgChatId').value.trim();
+  S.alertCfg = {
+    onSave: document.getElementById('acOnSave').checked,
+    onCritical: document.getElementById('acOnCritical').checked,
+    onHigh: document.getElementById('acOnHigh').checked,
+    onCompletion: document.getElementById('acOnCompletion').checked,
+  };
+  DB.set('tgToken', S.tgToken); DB.set('tgChatId', S.tgChatId); DB.set('alertCfg', S.alertCfg);
+  toast('✓ Telegram settings saved', 'ok');
+}
+async function testTelegram() {
+  if (!S.tgToken || !S.tgChatId) { toast('Set Telegram token & chat ID first', 'err'); return; }
+  await sendTelegramAlert('💧 MetrIQ MVP — Test alert! Telegram is working ✓');
+  toast('✓ Test message sent', 'ok');
+}
+async function sendTelegramAlert(msg) {
+  if (!S.tgToken || !S.tgChatId) return;
+  try {
+    const url = `https://api.telegram.org/bot${S.tgToken}/sendMessage?chat_id=${encodeURIComponent(S.tgChatId)}&text=${encodeURIComponent(msg)}&parse_mode=HTML`;
+    await fetch(url);
+  } catch {}
+}
+function saveEmailJS() {
+  S.ejsService = document.getElementById('ejsService').value.trim();
+  S.ejsTemplate = document.getElementById('ejsTemplate').value.trim();
+  S.ejsKey = document.getElementById('ejsKey').value.trim();
+  ['ejsService','ejsTemplate','ejsKey'].forEach(k => DB.set(k, S[k]));
+  toast('✓ EmailJS settings saved', 'ok');
+}
+async function testEmail() {
+  if (!S.ejsService || !S.ejsTemplate || !S.ejsKey) { toast('Set EmailJS credentials first', 'err'); return; }
+  toast('Sending test…');
+  try {
+    emailjs.init(S.ejsKey);
+    await emailjs.send(S.ejsService, S.ejsTemplate, {
+      to_email: S.user?.email || '',
+      subject: 'MetrIQ — Test Email',
+      message: 'Your EmailJS integration is working! 💧',
+      site_name: S.siteName || 'MetrIQ'
+    });
+    toast('✓ Test email sent', 'ok');
+  } catch (e) { toast('Email failed: ' + e.message, 'err'); }
+}
+
+// ── Admin: Meters ──
+function renderMeterSettingsList() {
+  if (S.role !== 'Admin') return;
+  const el = document.getElementById('meterList');
+  if (!S.meters.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No meters yet</div>';
+    return;
+  }
+  el.innerHTML = S.meters.map(m =>
+    `<div class="user-item">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${m.label}</div>
+        <div style="font-size:11px;color:var(--tx3)">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+      </div>
+      <button class="btn btg" style="padding:5px 10px;font-size:11px;flex:0" onclick="openEditMeter('${m.meter_id}')">Edit</button>
+    </div>`
+  ).join('');
+}
+function openAddMeter() { openM('mAddMeter'); }
+async function addMeter() {
+  const label = document.getElementById('nmLabel').value.trim();
+  const loc = document.getElementById('nmLoc').value.trim();
+  const floor = document.getElementById('nmFloor').value.trim();
+  if (!label) { toast('Enter meter label', 'err'); return; }
+  if (S.meters.length >= 100) { toast('Maximum 100 meters reached', 'err'); return; }
+  try {
+    const m = await api('addMeter', { label, location: loc, floor, addedBy: S.user?.name||'Admin' });
+    S.meters.push(m);
+    DB.set('meters_cache', S.meters);
+    closeM('mAddMeter');
+    renderMeterSettingsList();
+    toast('✓ Meter added', 'ok');
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+function openEditMeter(id) {
+  const m = S.meters.find(x => x.meter_id === id);
+  if (!m) return;
+  document.getElementById('editMeterId').value = id;
+  document.getElementById('editMLabel').value = m.label;
+  document.getElementById('editMLoc').value = m.location||'';
+  document.getElementById('editMFloor').value = m.floor||'';
+  openM('mEditMeter');
+}
+async function saveMeterEdit() {
+  const id = document.getElementById('editMeterId').value;
+  const label = document.getElementById('editMLabel').value.trim();
+  const loc = document.getElementById('editMLoc').value.trim();
+  const floor = document.getElementById('editMFloor').value.trim();
+  if (!label) { toast('Enter meter label', 'err'); return; }
+  try {
+    await api('updateMeter', { meter_id: id, label, location: loc, floor });
+    const m = S.meters.find(x => x.meter_id === id);
+    if (m) { m.label=label; m.location=loc; m.floor=floor; }
+    DB.set('meters_cache', S.meters);
+    closeM('mEditMeter');
+    renderMeterSettingsList();
+    toast('✓ Meter updated', 'ok');
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+async function deleteMeterConfirm() {
+  const id = document.getElementById('editMeterId').value;
+  const m = S.meters.find(x => x.meter_id === id);
+  if (!confirm(`Remove "${m?.label}"? This is a soft delete — existing readings are kept.`)) return;
+  try {
+    await api('deleteMeter', { meter_id: id });
+    S.meters = S.meters.filter(x => x.meter_id !== id);
+    DB.set('meters_cache', S.meters);
+    closeM('mEditMeter');
+    renderMeterSettingsList();
+    toast('Meter removed', 'ok');
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ── Admin: Users ──
+function renderUserList() {
+  if (S.role !== 'Admin') return;
+  const el = document.getElementById('userList');
+  if (!S.users.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No users yet</div>';
+    return;
+  }
+  el.innerHTML = S.users.map(u =>
+    `<div class="user-item">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${u.name}</div>
+        <div style="font-size:11px;color:var(--tx3)">${u.email||''}</div>
+      </div>
+      <span class="user-role-badge role-${u.role}">${u.role}</span>
+    </div>`
+  ).join('');
+}
+function openAddUser() { openM('mAddUser'); }
+async function addUser() {
+  const name = document.getElementById('nuName').value.trim();
+  const role = document.getElementById('nuRole').value;
+  const pin = document.getElementById('nuPin').value;
+  const email = document.getElementById('nuEmail').value.trim();
+  const tgId = document.getElementById('nuTgId').value.trim();
+  if (!name || !pin) { toast('Name and PIN required', 'err'); return; }
+  if (!/^\d{6}$/.test(pin)) { toast('PIN must be 6 digits', 'err'); return; }
+  try {
+    const user = await api('addUser', { name, role, pin, email, telegram_chat_id: tgId });
+    S.users.push(user);
+    DB.set('users_cache', S.users);
+    closeM('mAddUser');
+    renderUserList();
+    toast('✓ User added', 'ok');
+    // Telegram notification to new user if they have a chat ID
+    if (tgId && S.tgToken) {
+      const tempToken = S.tgToken;
+      fetch(`https://api.telegram.org/bot${tempToken}/sendMessage?chat_id=${tgId}&text=${encodeURIComponent(`Welcome to MetrIQ 💧\nYou've been added as ${role}.\nSite: ${S.siteName||'MetrIQ Site'}`)}`).catch(()=>{});
+    }
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ═══════════════════════════════════════════
+//  REPORTS (Manager/Admin)
+// ═══════════════════════════════════════════
+function openReportModal() {
+  // Populate month selector
+  const sel = document.getElementById('rptMonth');
+  sel.innerHTML = '';
+  getMonthOptions(6).forEach(my => {
+    const opt = document.createElement('option');
+    opt.value = my; opt.textContent = formatMonthYear(my);
+    sel.appendChild(opt);
+  });
+  // Pre-fill email
+  document.getElementById('rptEmail').value = S.user?.email || '';
+  // Show quota warning if needed
+  const remaining = S.emailQuota.limit - S.emailQuota.used;
+  const warn = document.getElementById('rptQuotaWarn');
+  if (remaining <= 20) {
+    warn.style.display = '';
+    document.getElementById('rptQuotaLeft').textContent = remaining;
+  } else {
+    warn.style.display = 'none';
+  }
+  openM('mReport');
+}
+
+async function sendReport() {
+  if (!S.ejsService || !S.ejsTemplate || !S.ejsKey) { toast('Configure EmailJS in Settings first', 'err'); return; }
+  const monthYear = document.getElementById('rptMonth').value;
+  const emails = document.getElementById('rptEmail').value.trim();
+  const note = document.getElementById('rptNote').value.trim();
+  if (!emails) { toast('Enter at least one email', 'err'); return; }
+
+  toast('Generating report…');
+  try {
+    const summary = await api('getMonthSummary', { month_year: monthYear });
+    const html = buildReportHTML(summary, monthYear, note);
+    emailjs.init(S.ejsKey);
+
+    // Send to each email
+    const emailList = emails.split(',').map(e=>e.trim()).filter(Boolean);
+    for (const email of emailList) {
+      await emailjs.send(S.ejsService, S.ejsTemplate, {
+        to_email: email,
+        subject: `MetrIQ Water Meter Report — ${formatMonthYear(monthYear)}`,
+        message: html,
+        site_name: S.siteName || 'MetrIQ',
+        month: formatMonthYear(monthYear),
+        completion: summary.completion_pct + '%',
+        done_count: summary.done,
+        total_count: summary.total_meters
+      });
+    }
+
+    // Increment quota
+    await api('incrementEmailQuota');
+    S.emailQuota.used++;
+    updateQuotaUI();
+
+    closeM('mReport');
+    toast(`✓ Report sent to ${emailList.length} recipient(s)`, 'ok');
+  } catch (e) {
+    toast('Report failed: ' + e.message, 'err');
+  }
+}
+
+function buildReportHTML(summary, monthYear, note) {
+  const rows = summary.meters.map(m => `
+    <tr>
+      <td>${m.label}</td>
+      <td>${m.location||'—'}</td>
+      <td>${m.floor||'—'}</td>
+      <td style="text-align:right">${m.reading !== null ? parseFloat(m.reading).toFixed(2) + ' m³' : '<span style="color:#dc2626">Pending</span>'}</td>
+      <td>${m.reading_date ? new Date(m.reading_date+'T12:00').toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : '—'}</td>
+      <td>${m.inspector||'—'}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#1a1a2e}
+    h1{color:#d97706;font-size:22px;margin-bottom:4px}
+    .meta{font-size:12px;color:#6b7280;margin-bottom:4px}
+    .summary{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+    .scard{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;min-width:100px}
+    .snum{font-size:24px;font-weight:700;color:#d97706}
+    .slbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
+    .pct{font-size:13px;font-weight:600;color:${summary.completion_pct===100?'#059669':summary.completion_pct>=50?'#d97706':'#dc2626'}}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+    th{background:#f3f4f6;padding:7px 8px;text-align:left;border:1px solid #e5e7eb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:7px 8px;border:1px solid #f0f0f0}
+    tr:nth-child(even) td{background:#fafafa}
+    .footer{margin-top:20px;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center}
+    .note{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 14px;font-size:12px;margin:12px 0}
+    .pending-list{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;margin:12px 0}
+  </style></head><body>
+  <h1>💧 MetrIQ — Water Meter Report</h1>
+  <div class="meta"><strong>${S.siteName||'MetrIQ Site'}</strong></div>
+  <div class="meta">Period: <strong>${formatMonthYear(monthYear)}</strong></div>
+  <div class="meta">Generated: ${new Date().toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+  ${note ? `<div class="note">${note}</div>` : ''}
+  <div class="summary">
+    <div class="scard"><div class="snum">${summary.done}/${summary.total_meters}</div><div class="slbl">Meters Read</div></div>
+    <div class="scard"><div class="snum pct">${summary.completion_pct}%</div><div class="slbl">Completion</div></div>
+    <div class="scard"><div class="snum" style="color:#dc2626">${summary.pending_count}</div><div class="slbl">Pending</div></div>
+  </div>
+  ${summary.pending_count > 0 ? `<div class="pending-list">⚠️ <strong>Pending meters:</strong> ${summary.pending_meters.join(', ')}</div>` : '<div style="color:#059669;font-size:13px;font-weight:600;margin:10px 0">✅ All meters read for this period!</div>'}
+  <table>
+    <thead><tr><th>Meter</th><th>Location</th><th>Floor</th><th>Reading</th><th>Date</th><th>Inspector</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">MetrIQ MVP v1 · Water Meter Management · Generated by ${S.user?.name||S.role}</div>
+  </body></html>`;
+}
+
+async function saveAsCopy() {
+  toast('Creating sheet copy…');
+  try {
+    const result = await api('saveAsCopy', { label: S.siteName || 'MetrIQ Data' });
+    window.open(result.url, '_blank');
+    toast('✓ Copy created — opened in new tab', 'ok');
+  } catch (e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
+//  MODALS + TOAST
+// ═══════════════════════════════════════════
+function openM(id) { document.getElementById(id).classList.add('open'); }
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+let tT;
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show' + (type?' '+type:'');
+  clearTimeout(tT); tT = setTimeout(() => { t.className=''; }, 2800);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.ov').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function fNum(v, dec=2) { const n=parseFloat(v); return isNaN(n)?v:n.toLocaleString('en-SG',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+function fDate(d) { if(!d)return''; try{return new Date(d+'T12:00').toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'2-digit'});}catch{return d;} }
+function daysBetween(a,b) { try{return Math.max(0,(new Date(b)-new Date(a))/86400000);}catch{return 1;} }
+
+// ═══════════════════════════════════════════
+//  SERVICE WORKER (PWA)
+// ═══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  const sw = `const C='miq-mvp1';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['/'])));self.skipWaiting();});
+self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+}
+
+// ── Boot ──
+buildPinDots();
+init();
+</script>
+</body>
+</html>
