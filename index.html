@@ -274,6 +274,32 @@ input[type=range]{flex:1;accent-color:var(--am)}
 #loadingOverlay.hidden{display:none}
 .load-logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:42px;letter-spacing:4px;color:var(--am)}
 .load-sub{font-size:12px;color:var(--tx3);font-family:'Share Tech Mono',monospace;letter-spacing:2px}
+
+/* ── V16 CAPTURE STYLES ── */
+.crop-wrap{position:relative;border-radius:var(--rs);overflow:hidden;border:1px solid var(--bd);background:#000;touch-action:none}
+.crop-wrap canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.crop-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.crop-reset{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer}
+.crop-extract{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--rs);border:none;background:var(--am);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:#000;cursor:pointer;letter-spacing:.5px}
+.crop-extract:disabled{opacity:.5;cursor:not-allowed}
+.phase-lbl{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);padding:4px 0 8px}
+.extbox{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:13px;margin-top:8px}
+.extrow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.extlbl{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--tx2);letter-spacing:1px;text-transform:uppercase}
+.extnum{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:var(--num);letter-spacing:3px;line-height:1}
+.extconf{font-size:11px;font-family:'Share Tech Mono',monospace;margin-top:4px}
+.refcard{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rs);padding:11px 13px;margin-top:8px}
+.reftit{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin-bottom:6px}
+.refgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.refil{font-size:10px;color:var(--tx3);margin-bottom:2px}
+.refiv{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--tx)}
+.refiv.exp{color:var(--am)}
+.cbanner{background:var(--amg);border:1.5px solid var(--am);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.cbtxt{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--am);line-height:1.3}
+.cbsub{font-size:11px;color:var(--tx2);margin-top:2px}
+.cinput{background:var(--sf2);border:2px solid var(--am);border-radius:var(--rs);padding:13px;color:var(--tx);font-family:'Share Tech Mono',monospace;font-size:22px;outline:none;width:100%;text-align:center;transition:box-shadow .2s}
+.cinput:focus{box-shadow:0 0 0 3px var(--amg)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
 </head>
 <body>
@@ -706,6 +732,8 @@ let S = {
 let cap = {};
 // chart handles
 let CH = {};
+// Crop tool state (v16 style — normalized 0-1 box)
+const CR = { canvas:null, ctx:null, img:null, box:{x:.05,y:.15,w:.9,h:.5}, drag:null };
 // PIN entry state
 let pe = '', pr = null; // pin entry, pending role
 
@@ -740,6 +768,9 @@ async function init() {
 
   // Load offline queue
   S.syncQueue = DB.get('syncQueue') || [];
+
+  // Inject mock data for demo (checks flag internally)
+  genMockData();
 
   applyTheme(S.dark);
   applyFont(S.fs, false);
@@ -925,35 +956,27 @@ async function afterLogin() {
   document.getElementById('loadingOverlay').classList.add('hidden');
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').style.display = 'flex';
-
-  // Header
-  document.getElementById('hdrSite').textContent = S.siteName || 'MetrIQ Site';
+  document.getElementById('hdrSite').textContent = S.siteName || 'MetrIQ';
   document.getElementById('hdrUser').textContent = (S.user?.name || S.role) + ' · ' + S.role;
-
-  // Nav visibility by role
   setupNavForRole();
 
-  // Load meters from backend/cache
-  await loadMeters();
+  // Load meters (uses cache immediately, refreshes in background)
+  loadMeters(); // no await — non-blocking
 
-  // Sync pending queue
   if (S.syncQueue.length > 0) updateSyncBadge();
-
-  // Populate settings fields
   populateSettings();
 
-  // Role-specific init
   if (S.role === 'Inspector') {
     go('dash');
     renderDashboard();
-  } else if (S.role === 'Manager' || S.role === 'Admin') {
+  } else {
     go('overview');
-    await loadOverview();
-    if (S.role === 'Admin') await loadUsersCache();
+    loadOverview(); // no await
   }
 
-  // Load email quota
-  loadQuota();
+  // Lazy loads
+  if (S.role === 'Admin') setTimeout(() => loadUsersCache(), 500);
+  setTimeout(() => loadQuota(), 800);
 }
 
 function setupNavForRole() {
@@ -1007,15 +1030,21 @@ function go(screen) {
 //  DATA LOADING
 // ═══════════════════════════════════════════
 async function loadMeters() {
+  // Show cached immediately
+  const cached = DB.get('meters_cache');
+  if (cached && cached.length) {
+    S.meters = cached;
+    updateMeterSelector();
+  }
+  // Refresh from backend in background (non-blocking)
   try {
     const meters = await api('getMeters');
     S.meters = meters || [];
     DB.set('meters_cache', S.meters);
+    updateMeterSelector();
   } catch {
-    // Use cache
-    S.meters = DB.get('meters_cache') || [];
+    if (!S.meters.length) S.meters = DB.get('meters_cache') || [];
   }
-  updateMeterSelector();
 }
 
 async function loadReadingsForMonth(monthYear) {
@@ -1261,8 +1290,8 @@ async function loadOverview() {
     return `<div class="mg-item">
       <div class="mg-dot ${done?'done':'pend'}"></div>
       <div style="flex:1;min-width:0">
-        <div class="mg-label">${m.label}</div>
-        <div style="font-size:11px;color:var(--tx3)">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+        <div class="mg-label" style="font-weight:600">${m.label}</div>
+        <div style="font-size:11px;color:var(--tx3)">${[m.location, m.floor].filter(Boolean).join(' · ') || 'No location set'}</div>
       </div>
       <div class="mg-val">${done ? fNum(r.reading_value,2)+' m³' : 'Pending'}</div>
       ${done ? `<div style="font-size:10px;color:var(--tx3);margin-left:4px">${fDate(r.reading_date)}</div>` : ''}
@@ -1321,13 +1350,15 @@ function selectMeter(meterId) {
 }
 
 // ═══════════════════════════════════════════
-//  CAPTURE FLOW
+//  CAPTURE FLOW — v16 style
 // ═══════════════════════════════════════════
+
 function startCapture() {
   if (!S.meters.length) { toast('No meters configured yet', 'err'); return; }
-  cap = { step: 0, meterId: S.activeMeter?.meter_id || null, photo: null, croppedPhoto: null,
-          extracted: null, conf: null, notes: null, confirmed: null, manualMode: false };
+  cap = { step: 0, meterId: S.activeMeter?.meter_id || null, photo: null,
+          croppedPhoto: null, extracted: null, conf: null, notes: '', confirmed: null, manualMode: false };
   if (S.meters.length === 1) { cap.meterId = S.meters[0].meter_id; cap.step = 1; }
+  CR.box = {x:.05,y:.15,w:.9,h:.5}; CR.drag = null;
   renderCapStep();
   go('capture');
 }
@@ -1336,11 +1367,10 @@ function renderCapStep() {
   const s = cap.step;
   document.getElementById('stepTitle').textContent = CAPTURE_STEPS[s].t;
   document.getElementById('stepSub').textContent = CAPTURE_STEPS[s].s;
-
   let bar = '';
   CAPTURE_STEPS.forEach((_,i) => {
     if (i>0) bar += '<div class="sline"></div>';
-    bar += `<div class="sdot ${i<s?'done':i===s?'cur':''}"></div>`;
+    bar += `<div class="sdot ${i<s?'done':i===s?'cur':''}">`+'</div>';
   });
   document.getElementById('stepBar').innerHTML = bar;
   document.getElementById('btnBack').style.display = s===0 ? 'none' : '';
@@ -1350,180 +1380,248 @@ function renderCapStep() {
   const c = document.getElementById('capContent');
 
   if (s === 0) {
-    // Meter selection
-    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">${S.meters.map(m => {
+    // ── STEP 0: Select meter ──
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:9px">${S.meters.map(m => {
       const cur = curMonthYear();
       const read = (S.readings[cur]||[]).some(r=>r.meter_id===m.meter_id);
       const sel = cap.meterId===m.meter_id ? 'border-color:var(--am);background:var(--amg)' : '';
-      return `<div class="card" style="cursor:pointer;${sel}" onclick="capSelMeter('${m.meter_id}')">
+      return `<div class="card" style="cursor:pointer;${sel}" onclick="capSelMeter('${m.meter_id}',this)">
         <div style="display:flex;align-items:center;gap:11px">
-          <div style="font-size:22px;width:38px;height:38px;background:var(--sf2);border-radius:8px;display:flex;align-items:center;justify-content:center">💧</div>
-          <div style="flex:1">
+          <div style="font-size:22px;width:38px;height:38px;background:var(--sf2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">💧</div>
+          <div style="flex:1;min-width:0">
             <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700">${m.label}</div>
-            <div style="font-size:12px;color:var(--tx2)">${m.location||''}${m.floor?' · '+m.floor:''}</div>
+            <div style="font-size:12px;color:var(--tx2)">${[m.location,m.floor].filter(Boolean).join(' · ')||'No location'}</div>
           </div>
-          ${read ? '<div style="font-size:11px;color:var(--gn);font-family:\'Share Tech Mono\',monospace">✓ Read</div>' : ''}
+          ${read ? '<div style="font-size:11px;color:var(--gn);font-family:\'Share Tech Mono\',monospace;flex-shrink:0">✓ Read</div>' : ''}
         </div>
       </div>`;
     }).join('')}</div>`;
 
   } else if (s === 1) {
-    const hasPhoto = !!cap.photo;
+    const hp = !!cap.photo;
 
-    if (!hasPhoto && !cap.manualMode) {
-      // Entry mode selection
+    if (!hp && !cap.manualMode) {
+      // ── PHASE A: entry mode ──
       c.innerHTML = `
+        <div class="phase-lbl">Step 1 of 3 — Add Photo</div>
         <div class="entry-modes">
           <button class="entry-btn" onclick="tCam()"><span class="eico">📷</span>Camera</button>
           <button class="entry-btn" onclick="tFile()"><span class="eico">🖼️</span>Gallery</button>
           <button class="entry-btn" onclick="startManual()"><span class="eico">✏️</span>Manual</button>
         </div>
-        <input type="file" id="fInp" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
-        <input type="file" id="gInp" accept="image/*" style="display:none" onchange="onFile(this)">
-        <div style="font-size:12px;color:var(--tx3);text-align:center;padding-top:8px">Take or upload a clear photo of the meter display</div>`;
-    } else if (cap.manualMode) {
-      c.innerHTML = `
-        <div class="card">
-          <div class="clbl" style="margin-bottom:8px">Enter reading manually</div>
-          <input class="manual-inp" type="number" id="manualVal" inputmode="decimal" placeholder="0.00"
-            step="0.01" value="${cap.confirmed||''}" onchange="cap.confirmed=this.value">
-        </div>
-        <button class="btn btg wf" style="margin-top:4px" onclick="cap.manualMode=false;cap.photo=null;renderCapStep()">← Use Camera Instead</button>`;
-    } else {
-      // Has photo — show crop + extract UI
-      c.innerHTML = `
-        <div class="prev-wrap">
-          <img id="prevImg" src="${cap.photo}" style="max-height:200px;width:100%;object-fit:contain">
-          <button class="prev-retake" onclick="retakePhoto()">↺ Retake</button>
-        </div>
-        <div style="margin-top:10px;font-size:12px;color:var(--tx2)">Tap & drag to crop the meter display area (optional)</div>
-        <canvas id="cropCanvas" style="margin-top:8px;border-radius:var(--rs);width:100%;background:var(--sf2);max-height:200px"></canvas>
-        <div class="crop-hint">Drag to select meter digits area · Double-tap to reset</div>
-        <button class="btn btp wf" style="margin-top:10px" id="btnExtract" onclick="doExtractCropped()">🤖 Extract Reading</button>
-        <div id="extBox" style="display:none" class="extbox"></div>
-        <div id="confirmZone" style="display:none"></div>`;
+        <input type="file" id="camIn" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
+        <input type="file" id="galIn" accept="image/*" style="display:none" onchange="onFile(this)">
+        <div style="font-size:11px;color:var(--tx3);text-align:center;padding-top:4px">Camera/Gallery → AI extracts reading · Manual → type directly</div>
+        ${getRefCard()}`;
+      document.getElementById('btnNext').disabled = true;
 
-      setTimeout(() => initCropCanvas(), 50);
+    } else if (hp) {
+      // ── PHASE B: crop canvas ──
+      c.innerHTML = `
+        <div class="phase-lbl">Step 2 of 3 — Crop to Meter Digits</div>
+        <div class="crop-wrap" id="cropWrap"><canvas id="cropCanvas"></canvas></div>
+        <div class="crop-actions">
+          <button class="crop-reset" onclick="resetCrop()">↺ Retake Photo</button>
+          <button class="crop-extract" id="btnExtract" onclick="doExtractCropped()">⚡ Extract Reading</button>
+        </div>
+        <input type="file" id="camIn" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
+        <input type="file" id="galIn" accept="image/*" style="display:none" onchange="onFile(this)">
+        <div class="extbox" id="extBox" style="display:none"></div>
+        <div id="confirmZone" style="display:none;flex-direction:column;gap:10px"></div>`;
+      setTimeout(() => initCropTool('cropCanvas'), 60);
+      if (cap.extracted !== null) setTimeout(() => showConfirmZone(), 80);
+      document.getElementById('btnNext').disabled = true;
+      document.getElementById('btnNext').textContent = 'Confirm & Save';
+
+    } else {
+      // ── PHASE C: manual mode ──
+      const now = new Date();
+      c.innerHTML = `
+        <div class="phase-lbl">Manual Entry</div>
+        <div class="fg">
+          <label class="fl">Enter Reading (m³)</label>
+          <input class="cinput" type="number" id="confIn" step="0.001" inputmode="decimal" autofocus
+            placeholder="e.g. 1234.56" oninput="checkAnomaly(this.value)">
+        </div>
+        <div id="anomalyZone"></div>
+        ${getRefCard()}
+        <div class="frow">
+          <div class="fg"><div class="fl">Date</div><input class="fi" type="date" id="rDate" value="${now.toISOString().split('T')[0]}"></div>
+          <div class="fg"><div class="fl">Time</div><input class="fi" type="time" id="rTime" value="${now.toTimeString().slice(0,5)}"></div>
+        </div>
+        <div class="fg"><div class="fl">Notes (optional)</div><input class="fi" id="rNotes" placeholder="Any observations…" maxlength="100"></div>
+        <button class="crop-reset" style="margin-top:4px" onclick="exitManual()">← Back to photo options</button>`;
+      document.getElementById('btnNext').disabled = false;
+      document.getElementById('btnNext').textContent = 'Confirm & Save';
     }
   }
 }
 
-function capSelMeter(id) {
+function capSelMeter(id, el) {
   cap.meterId = id;
-  document.querySelectorAll('#capContent .card').forEach(el => {
-    el.style.borderColor = '';
-    el.style.background = '';
-  });
-  event.currentTarget.style.borderColor = 'var(--am)';
-  event.currentTarget.style.background = 'var(--amg)';
+  document.querySelectorAll('#capContent .card').forEach(c => { c.style.borderColor=''; c.style.background=''; });
+  if (el) { el.style.borderColor='var(--am)'; el.style.background='var(--amg)'; }
 }
 function capBack() {
-  if (cap.step > 0) { cap.step--; cap.photo=null; cap.extracted=null; cap.confirmed=null; cap.manualMode=false; renderCapStep(); }
-  else go(S.role==='Inspector'?'dash':'overview');
+  if (cap.step === 0) { go(S.role==='Inspector'?'dash':'overview'); return; }
+  cap.step--;
+  if (cap.step === 0 && S.meters.length === 1) { go(S.role==='Inspector'?'dash':'overview'); return; }
+  cap.photo = null; cap.extracted = null; cap.confirmed = null; cap.manualMode = false;
+  renderCapStep();
 }
 function capNext() {
   if (cap.step === 0) {
-    if (!cap.meterId) { toast('Select a meter', 'err'); return; }
+    if (!cap.meterId) { toast('Select a meter first', 'err'); return; }
     cap.step = 1; renderCapStep();
   } else if (cap.step === 1) {
-    if (!cap.confirmed && cap.confirmed !== 0) { toast('Reading not confirmed yet', 'err'); return; }
-    saveCapture();
+    if (cap.manualMode) {
+      const v = document.getElementById('confIn')?.value;
+      if (!v || isNaN(parseFloat(v))) { toast('Enter a valid reading', 'err'); return; }
+      cap.confirmed = v;
+      saveCapture();
+    } else if (cap.confirmed !== null) {
+      saveCapture();
+    } else {
+      toast('Confirm the reading first', 'err');
+    }
   }
 }
-function tCam() { document.getElementById('fInp').click(); }
-function tFile() { document.getElementById('gInp').click(); }
+function tCam() { document.getElementById('camIn')?.click(); }
+function tFile() { document.getElementById('galIn')?.click(); }
 function startManual() { cap.manualMode = true; renderCapStep(); }
-function retakePhoto() { cap.photo = null; cap.extracted = null; cap.confirmed = null; renderCapStep(); }
+function exitManual() { cap.manualMode = false; cap.photo = null; renderCapStep(); }
+function resetCrop() { cap.photo = null; cap.extracted = null; cap.confirmed = null; CR.box={x:.05,y:.15,w:.9,h:.5}; renderCapStep(); }
 
 function onFile(input) {
-  const f = input.files?.[0];
-  if (!f) return;
+  const f = input?.files?.[0]; if (!f) return;
   const reader = new FileReader();
-  reader.onload = e => { cap.photo = e.target.result; renderCapStep(); };
+  reader.onload = async e => {
+    toast('Loading…');
+    cap.photo = await preprocessPhoto(e.target.result);
+    cap.extracted = null; cap.confirmed = null;
+    CR.box = {x:.05,y:.15,w:.9,h:.5};
+    renderCapStep();
+  };
   reader.readAsDataURL(f);
 }
 
-// ── Crop canvas ──
-let cropState = { dragging: false, startX: 0, startY: 0, rect: null, imgNat: null };
-function initCropCanvas() {
-  const canvas = document.getElementById('cropCanvas');
-  if (!canvas) return;
-  const img = new Image();
-  img.onload = () => {
-    cropState.imgNat = img;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    drawCrop();
-  };
-  img.src = cap.photo;
+// Preprocess photo: auto-rotate, cap size
+async function preprocessPhoto(dataUrl) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, MAX / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      res(cv.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => res(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
-  canvas.addEventListener('mousedown', cropStart);
-  canvas.addEventListener('mousemove', cropMove);
-  canvas.addEventListener('mouseup', cropEnd);
-  canvas.addEventListener('touchstart', e => { e.preventDefault(); const t=e.touches[0]; cropStart({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top}); }, {passive:false});
-  canvas.addEventListener('touchmove', e => { e.preventDefault(); const t=e.touches[0]; cropMove({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top}); }, {passive:false});
-  canvas.addEventListener('touchend', cropEnd, {passive:false});
-  canvas.addEventListener('dblclick', () => { cropState.rect=null; drawCrop(); });
+// ── V16-STYLE CROP TOOL ──
+function initCropTool(canvasId) {
+  const cv = document.getElementById(canvasId); if (!cv) return;
+  CR.canvas = cv; CR.ctx = cv.getContext('2d'); CR.img = new Image();
+  CR.img.onload = () => {
+    cv.width = CR.img.width; cv.height = CR.img.height;
+    drawCrop();
+    cv.addEventListener('pointerdown', onCropDown);
+    cv.addEventListener('pointermove', onCropMove);
+    cv.addEventListener('pointerup',   onCropUp);
+    cv.addEventListener('pointercancel', onCropUp);
+  };
+  CR.img.src = cap.photo;
 }
-function toNatural(canvas, x, y) {
-  const scale = canvas.width / canvas.clientWidth;
-  return [x * scale, y * scale];
+function c2n(e) {
+  const r = CR.canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*CR.img.width/r.width, y:(e.clientY-r.top)*CR.img.height/r.height };
 }
-function cropStart(e) {
-  const canvas = document.getElementById('cropCanvas');
-  const [nx,ny] = toNatural(canvas, e.offsetX, e.offsetY);
-  cropState.dragging = true;
-  cropState.startX = nx; cropState.startY = ny;
-  cropState.rect = null;
+function boxNative() {
+  const W=CR.img.width,H=CR.img.height,b=CR.box;
+  return {x:b.x*W, y:b.y*H, w:b.w*W, h:b.h*H};
 }
-function cropMove(e) {
-  if (!cropState.dragging) return;
-  const canvas = document.getElementById('cropCanvas');
-  const [nx,ny] = toNatural(canvas, e.offsetX, e.offsetY);
-  cropState.rect = { x: Math.min(cropState.startX,nx), y: Math.min(cropState.startY,ny),
-    w: Math.abs(nx-cropState.startX), h: Math.abs(ny-cropState.startY) };
+function HR() { return Math.max(28, CR.img.width*0.04); }
+function getHandleNative(pt) {
+  const bn=boxNative(),hr=HR();
+  const handles=[
+    {id:'tl',x:bn.x,         y:bn.y},         {id:'tm',x:bn.x+bn.w/2, y:bn.y},
+    {id:'tr',x:bn.x+bn.w,    y:bn.y},         {id:'ml',x:bn.x,          y:bn.y+bn.h/2},
+    {id:'mr',x:bn.x+bn.w,    y:bn.y+bn.h/2}, {id:'bl',x:bn.x,          y:bn.y+bn.h},
+    {id:'bm',x:bn.x+bn.w/2,  y:bn.y+bn.h},   {id:'br',x:bn.x+bn.w,    y:bn.y+bn.h},
+  ];
+  for (const h of handles) { if (Math.hypot(pt.x-h.x,pt.y-h.y)<hr) return h.id; }
+  return null;
+}
+function inBoxNative(pt) { const bn=boxNative(); return pt.x>bn.x&&pt.x<bn.x+bn.w&&pt.y>bn.y&&pt.y<bn.y+bn.h; }
+function onCropDown(e) {
+  e.preventDefault();
+  try { CR.canvas.setPointerCapture(e.pointerId); } catch {}
+  const pt=c2n(e), hid=getHandleNative(pt), bn=boxNative();
+  if (hid) { CR.drag={type:'handle',id:hid,pt0:{...pt},left0:bn.x,top0:bn.y,right0:bn.x+bn.w,bottom0:bn.y+bn.h}; }
+  else if (inBoxNative(pt)) { CR.drag={type:'move',pt0:{...pt},box0:{...CR.box}}; }
+}
+function onCropMove(e) {
+  e.preventDefault(); if (!CR.drag) return;
+  const pt=c2n(e), W=CR.img.width, H=CR.img.height, MIN=W*0.06;
+  if (CR.drag.type==='move') {
+    const dx=(pt.x-CR.drag.pt0.x)/W, dy=(pt.y-CR.drag.pt0.y)/H;
+    CR.box.x=Math.max(0,Math.min(1-CR.drag.box0.w,CR.drag.box0.x+dx));
+    CR.box.y=Math.max(0,Math.min(1-CR.drag.box0.h,CR.drag.box0.y+dy));
+  } else {
+    const id=CR.drag.id, dx=pt.x-CR.drag.pt0.x, dy=pt.y-CR.drag.pt0.y;
+    let L=CR.drag.left0,T=CR.drag.top0,R=CR.drag.right0,B=CR.drag.bottom0;
+    if(id==='tl'||id==='ml'||id==='bl') L=Math.max(0,Math.min(R-MIN,L+dx));
+    if(id==='tr'||id==='mr'||id==='br') R=Math.max(L+MIN,Math.min(W,R+dx));
+    if(id==='tl'||id==='tm'||id==='tr') T=Math.max(0,Math.min(B-MIN,T+dy));
+    if(id==='bl'||id==='bm'||id==='br') B=Math.max(T+MIN,Math.min(H,B+dy));
+    CR.box={x:L/W,y:T/H,w:(R-L)/W,h:(B-T)/H};
+  }
   drawCrop();
 }
-function cropEnd() { cropState.dragging = false; }
+function onCropUp(e) {
+  e.preventDefault(); CR.drag=null;
+  try { CR.canvas.releasePointerCapture(e.pointerId); } catch {}
+}
 function drawCrop() {
-  const canvas = document.getElementById('cropCanvas');
-  if (!canvas || !cropState.imgNat) return;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(cropState.imgNat, 0, 0);
-  const r = cropState.rect;
-  if (r && r.w > 5 && r.h > 5) {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.clearRect(r.x,r.y,r.w,r.h);
-    ctx.drawImage(cropState.imgNat, r.x,r.y,r.w,r.h, r.x,r.y,r.w,r.h);
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(r.x,r.y,r.w,r.h);
-  }
+  const cv=CR.canvas,ctx=CR.ctx,img=CR.img; if(!cv||!ctx||!img) return;
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H); ctx.drawImage(img,0,0);
+  const b=CR.box,x=b.x*W,y=b.y*H,w=b.w*W,h=b.h*H;
+  ctx.fillStyle='rgba(0,0,0,0.52)';
+  ctx.fillRect(0,0,W,y); ctx.fillRect(0,y+h,W,H-y-h);
+  ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,W-x-w,h);
+  ctx.strokeStyle='#f59e0b'; ctx.lineWidth=Math.max(3,W*0.005); ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle='rgba(245,158,11,0.07)'; ctx.fillRect(x,y,w,h);
+  const hr=HR();
+  [[x,y],[x+w/2,y],[x+w,y],[x,y+h/2],[x+w,y+h/2],[x,y+h],[x+w/2,y+h],[x+w,y+h]].forEach(([hx,hy])=>{
+    ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(hx,hy,hr,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,W*0.003); ctx.beginPath(); ctx.arc(hx,hy,hr,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.arc(hx,hy,hr*0.32,0,Math.PI*2); ctx.fill();
+  });
 }
 function getCroppedDataUrl() {
-  const r = cropState.rect;
-  const img = cropState.imgNat;
-  if (!r || !img || r.w < 10 || r.h < 10) return cap.photo;
-  const cv = document.createElement('canvas');
-  cv.width = r.w; cv.height = r.h;
-  cv.getContext('2d').drawImage(img, r.x,r.y,r.w,r.h, 0,0,r.w,r.h);
-  return cv.toDataURL('image/jpeg', 0.9);
+  if (!CR.img||!CR.canvas) return cap.photo;
+  const W=CR.img.width,H=CR.img.height,b=CR.box,PAD=0.02;
+  const x=Math.max(0,(b.x-PAD)*W),y=Math.max(0,(b.y-PAD)*H);
+  const w=Math.min(W-x,(b.w+PAD*2)*W),h=Math.min(H-y,(b.h+PAD*2)*H);
+  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+  tmp.getContext('2d').drawImage(CR.img,x,y,w,h,0,0,w,h);
+  return tmp.toDataURL('image/jpeg',.92);
 }
 
-// ── Extraction ──
 async function doExtractCropped() {
-  const btn = document.getElementById('btnExtract');
-  if (btn) btn.disabled = true;
-  document.getElementById('extBox').style.display = '';
-  document.getElementById('extBox').innerHTML = '<div class="spin"></div> Analysing meter image…';
-  document.getElementById('confirmZone').style.display = 'none';
-  document.getElementById('btnNext').disabled = true;
+  const btn=document.getElementById('btnExtract'); if(btn) btn.disabled=true;
+  const eb=document.getElementById('extBox');
+  if(eb){ eb.style.display='block'; eb.innerHTML=`<div class="extrow"><div class="spin"></div><span class="extlbl">Analysing meter image…</span></div><div class="extnum">· · ·</div>`; }
+  document.getElementById('btnNext').disabled=true;
   cap.croppedPhoto = getCroppedDataUrl();
   await doExtract(cap.croppedPhoto);
-  if (btn) btn.disabled = false;
-  setTimeout(showConfirmZone, 60);
+  if(btn) btn.disabled=false;
 }
 
 async function doExtract(imageDataUrl) {
@@ -1572,61 +1670,130 @@ If you cannot read it clearly, set confidence below 0.5 and explain in notes.`;
 }
 
 function showExtResult() {
-  const conf = cap.conf || 0;
-  const confClass = conf >= 0.85 ? 'conf-hi' : conf >= 0.6 ? 'conf-md' : 'conf-lo';
-  const confLabel = conf >= 0.85 ? 'High confidence' : conf >= 0.6 ? 'Medium confidence' : 'Low confidence — verify carefully';
-  const eb = document.getElementById('extBox');
-  if (eb) {
-    eb.innerHTML = `
-      <div class="extnum">${cap.extracted || '—'}</div>
-      <div class="extconf ${confClass}">m³ · ${(conf*100).toFixed(0)}% — ${confLabel}</div>
-      ${cap.notes ? `<div style="font-size:11px;color:var(--tx3);margin-top:5px">${cap.notes}</div>` : ''}`;
-  }
+  const conf=cap.conf||0;
+  const confClass=conf>=.85?'conf-hi':conf>=.6?'conf-md':'conf-lo';
+  const confLabel=conf>=.85?'High confidence':conf>=.6?'Medium — verify carefully':'Low — verify carefully';
+  const eb=document.getElementById('extBox');
+  if(eb) eb.innerHTML=`<div class="extrow"><span style="font-size:18px">${conf>=.85?'✅':conf>=.6?'⚠️':'❌'}</span><span class="extlbl">AI Extraction Result</span></div>
+    <div class="extnum">${cap.extracted||'—'}</div>
+    <div class="extconf ${confClass}">m³ · ${(conf*100).toFixed(0)}% · ${confLabel}</div>
+    ${cap.notes?`<div style="font-size:11px;color:var(--tx3);margin-top:4px">${cap.notes}</div>`:''}` ;
+  showConfirmZone();
 }
 function showExtManual(reason) {
-  const eb = document.getElementById('extBox');
-  if (eb) eb.innerHTML = `<div style="color:var(--tx2);font-size:13px">${reason} — enter reading below</div>`;
+  const eb=document.getElementById('extBox');
+  if(eb) eb.innerHTML=`<div class="extrow"><span style="font-size:18px">✏️</span><span class="extlbl" style="color:var(--tx2)">${reason}</span></div>`;
   showConfirmZone();
 }
 function showExtError(msg) {
-  const eb = document.getElementById('extBox');
-  if (eb) eb.innerHTML = `<div style="color:var(--rd);font-size:12px">⚠️ ${msg}</div>`;
+  const eb=document.getElementById('extBox');
+  if(eb) eb.innerHTML=`<div class="extrow"><span style="font-size:18px">⚠️</span><span class="extlbl" style="color:var(--rd)">${msg}</span></div>`;
   showConfirmZone();
 }
 
 function showConfirmZone() {
-  const cz = document.getElementById('confirmZone');
-  if (!cz) return;
-  cz.style.display = '';
-  const hasExt = !!cap.extracted;
-  cz.innerHTML = `
-    <div style="margin-top:10px;font-size:12px;color:var(--tx2);margin-bottom:6px">${hasExt ? 'Confirm the extracted reading:' : 'Enter the reading manually:'}</div>
-    <input class="manual-inp" type="number" id="confirmVal" inputmode="decimal" step="0.01"
-      value="${cap.extracted||''}" placeholder="0.00" oninput="cap.confirmed=this.value">
-    <div style="height:8px"></div>
-    <button class="btn btp wf" onclick="confirmReading()" style="margin-top:4px">✓ Confirm Reading</button>`;
-  document.getElementById('btnNext').disabled = false;
+  const cz=document.getElementById('confirmZone'); if(!cz) return;
+  const now=new Date();
+  cz.style.display='flex';
+  cz.innerHTML=`
+    <div class="cbanner">
+      <span style="font-size:22px;flex-shrink:0">👁️</span>
+      <div><div class="cbtxt">Verify Reading</div><div class="cbsub">Compare against the meter display — edit if needed</div></div>
+    </div>
+    <div class="fg">
+      <label class="fl">✏️ Confirmed Reading (m³)</label>
+      <input class="cinput" type="number" id="confIn" step="0.001" inputmode="decimal"
+        value="${cap.extracted||''}" placeholder="e.g. 1234.56"
+        oninput="cap.confirmed=this.value;checkAnomaly(this.value)">
+    </div>
+    <div id="anomalyZone"></div>
+    ${getRefCard()}
+    <div class="frow">
+      <div class="fg"><div class="fl">Date</div><input class="fi" type="date" id="rDate" value="${now.toISOString().split('T')[0]}"></div>
+      <div class="fg"><div class="fl">Time</div><input class="fi" type="time" id="rTime" value="${now.toTimeString().slice(0,5)}"></div>
+    </div>
+    <div class="fg"><div class="fl">Notes (optional)</div><input class="fi" id="rNotes" placeholder="Any observations…" maxlength="100"></div>`;
+  document.getElementById('btnNext').disabled=false;
+  document.getElementById('btnNext').textContent='Confirm & Save';
+  // Pre-check anomaly if extracted value is already there
+  if(cap.extracted) checkAnomaly(cap.extracted);
 }
-function confirmReading() {
-  const v = document.getElementById('confirmVal')?.value;
-  if (!v || isNaN(parseFloat(v))) { toast('Enter a valid reading', 'err'); return; }
-  cap.confirmed = v;
-  // Show save form
-  const cz = document.getElementById('confirmZone');
-  const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
-  const timeStr = now.toTimeString().slice(0,5);
-  cz.innerHTML = `
-    <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
-      <div style="background:var(--amg);border:1px solid var(--am);border-radius:var(--rs);padding:10px 13px;text-align:center">
-        <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--num)">${cap.confirmed}</div>
-        <div style="font-size:11px;color:var(--tx2)">m³ · confirmed</div>
-      </div>
-      <div class="fg"><div class="fl">Date</div><input class="fi" type="date" id="rDate" value="${dateStr}"></div>
-      <div class="fg"><div class="fl">Time</div><input class="fi" type="time" id="rTime" value="${timeStr}"></div>
-      <div class="fg"><div class="fl">Notes (optional)</div><input class="fi" id="rNotes" placeholder="Any observations…" value="${cap.notes||''}"></div>
-    </div>`;
-  document.getElementById('btnNext').disabled = false;
+
+// ── Reference card (last reading + expected range) ──
+function getRefCard() {
+  const m = S.meters.find(x => x.meter_id===cap.meterId); if(!m) return '';
+  const localReadings = DB.get('all_readings_'+cap.meterId)||[];
+  const allR = [...localReadings];
+  Object.values(S.readings).forEach(arr=>arr.forEach(r=>{if(r.meter_id===cap.meterId&&!allR.find(x=>x.reading_id===r.reading_id))allR.push(r);}));
+  if(!allR.length) return '';
+  const sorted=allR.sort((a,b)=>a.reading_date.localeCompare(b.reading_date));
+  const last=sorted[sorted.length-1];
+  const dAgo=Math.round(daysBetween(last.reading_date,new Date().toISOString().split('T')[0]));
+  let expHtml='';
+  if(sorted.length>=2){
+    const pts=[];
+    for(let i=Math.max(1,sorted.length-6);i<sorted.length;i++){
+      const d=Math.max(1,daysBetween(sorted[i-1].reading_date,sorted[i].reading_date));
+      const c=parseFloat(sorted[i].reading_value)-parseFloat(sorted[i-1].reading_value);
+      if(c>=0) pts.push(c/d);
+    }
+    if(pts.length){
+      const avg=pts.reduce((s,v)=>s+v,0)/pts.length;
+      const lo=(parseFloat(last.reading_value)+avg*dAgo*0.7).toFixed(2);
+      const hi=(parseFloat(last.reading_value)+avg*dAgo*1.3).toFixed(2);
+      expHtml=`<div><div class="refil">Expected today</div><div class="refiv exp">${lo} – ${hi}</div></div>`;
+    }
+  }
+  return `<div class="refcard"><div class="reftit">📌 Last Recorded — Reference</div>
+    <div class="refgrid">
+      <div><div class="refil">Last reading</div><div class="refiv">${fNum(last.reading_value,2)} m³</div></div>
+      <div><div class="refil">Recorded</div><div class="refiv">${fDate(last.reading_date)} (${dAgo}d ago)</div></div>
+      ${expHtml}
+      <div><div class="refil">Meter</div><div class="refiv">💧 ${m.label}</div></div>
+    </div></div>`;
+}
+
+// ── Live anomaly check while typing ──
+function checkAnomaly(val) {
+  const zone=document.getElementById('anomalyZone'); if(!zone) return;
+  const m=S.meters.find(x=>x.meter_id===cap.meterId); if(!m||!val||isNaN(parseFloat(val))){zone.innerHTML='';return;}
+  const v=parseFloat(val);
+  const localReadings=DB.get('all_readings_'+cap.meterId)||[];
+  const allR=[...localReadings];
+  Object.values(S.readings).forEach(arr=>arr.forEach(r=>{if(r.meter_id===cap.meterId&&!allR.find(x=>x.reading_id===r.reading_id))allR.push(r);}));
+  if(!allR.length){zone.innerHTML='';return;}
+  const sorted=allR.sort((a,b)=>a.reading_date.localeCompare(b.reading_date));
+  const last=sorted[sorted.length-1];
+  const lastV=parseFloat(last.reading_value);
+  const warnings=[];
+
+  // 1. Reading backwards
+  if(v<lastV) {
+    warnings.push({cls:'t-critical',icon:'🔴',msg:`Reading ${v.toFixed(2)} is LOWER than last recorded ${lastV.toFixed(2)} m³. Meters cannot run backwards — likely OCR error.`});
+  }
+  // 2. Rate analysis
+  if(sorted.length>=2){
+    const pts=[];
+    for(let i=Math.max(1,sorted.length-8);i<sorted.length;i++){
+      const d=Math.max(1,daysBetween(sorted[i-1].reading_date,sorted[i].reading_date));
+      const c=parseFloat(sorted[i].reading_value)-parseFloat(sorted[i-1].reading_value);
+      if(c>=0) pts.push(c/d);
+    }
+    if(pts.length>=2){
+      const avg=pts.reduce((s,x)=>s+x,0)/pts.length;
+      const dAgo=Math.max(1,daysBetween(last.reading_date,new Date().toISOString().split('T')[0]));
+      const consumption=v-lastV;
+      const dailyRate=consumption/dAgo;
+      if(v>lastV){
+        if(dailyRate>avg*3) warnings.push({cls:'t-critical',icon:'🔴',msg:`Daily rate ${dailyRate.toFixed(2)} m³/day is ${((dailyRate/avg-1)*100).toFixed(0)}% above normal (avg ${avg.toFixed(2)}/day). Possible OCR digit error — verify carefully.`});
+        else if(dailyRate>avg*1.5) warnings.push({cls:'t-high',icon:'🟡',msg:`Daily rate ${dailyRate.toFixed(2)} m³/day is elevated vs normal ${avg.toFixed(2)}/day. Worth confirming.`});
+        else if(dailyRate<avg*0.3&&dAgo>3) warnings.push({cls:'t-low',icon:'🔵',msg:`Daily rate ${dailyRate.toFixed(2)} m³/day seems very low vs normal ${avg.toFixed(2)}/day. Check reading.`});
+        else warnings.push({cls:'t-normal',icon:'🟢',msg:`Consumption rate ${dailyRate.toFixed(2)} m³/day — within normal range (avg ${avg.toFixed(2)}/day). ✓`});
+      }
+    }
+  }
+  if(!warnings.length){zone.innerHTML='';return;}
+  zone.innerHTML=warnings.map(w=>`<div class="tbadge ${w.cls}"><span style="font-size:17px;flex-shrink:0">${w.icon}</span><span style="font-size:12px">${w.msg}</span></div>`).join('');
 }
 
 // ── Save ──
@@ -2367,6 +2534,72 @@ if ('serviceWorker' in navigator) {
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['/'])));self.skipWaiting();});
 self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});`;
   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════
+//  MOCK DATA
+// ═══════════════════════════════════════════
+function genMockData() {
+  if (DB.get('mock_loaded')) return;
+  const meterDefs = [
+    {label:'#01-01 Blk A',location:'Block A',floor:'Level 1'},
+    {label:'#01-02 Blk A',location:'Block A',floor:'Level 1'},
+    {label:'#02-01 Blk A',location:'Block A',floor:'Level 2'},
+    {label:'#02-02 Blk A',location:'Block A',floor:'Level 2'},
+    {label:'#01-01 Blk B',location:'Block B',floor:'Level 1'},
+    {label:'#01-02 Blk B',location:'Block B',floor:'Level 1'},
+    {label:'#02-01 Blk B',location:'Block B',floor:'Level 2'},
+    {label:'#02-02 Blk B',location:'Block B',floor:'Level 2'},
+    {label:'Common Area 1',location:'Lobby',floor:'Ground'},
+    {label:'Common Area 2',location:'Rooftop',floor:'Top'},
+  ];
+  const meters = meterDefs.map((d,i) => ({
+    meter_id: 'MOCK_'+String(i+1).padStart(2,'0'),
+    label: d.label, location: d.location, floor: d.floor,
+    active: 'Y', added_date: '2024-01-01', added_by: 'Admin'
+  }));
+  DB.set('meters_cache', meters);
+  S.meters = meters;
+
+  // Generate 24 months of readings per meter
+  meters.forEach(m => {
+    const readings = [];
+    let val = 800 + Math.random()*400; // start 800-1200
+    const monthlyRate = 7 + Math.random()*6; // 7-13 m³/month
+    for (let mo = 0; mo < 24; mo++) {
+      const date = new Date(2024, mo, 10 + Math.floor(Math.random()*5));
+      const monthYear = date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0');
+      // Occasional spike/drop for realism
+      const variation = (Math.random()-0.5)*0.4;
+      const inc = Math.max(0, monthlyRate * (1+variation));
+      val += inc;
+      readings.push({
+        reading_id: 'MOCK_R_'+m.meter_id+'_'+mo,
+        meter_id: m.meter_id,
+        month_year: monthYear,
+        reading_value: val.toFixed(2),
+        reading_date: date.toISOString().split('T')[0],
+        reading_time: '10:00',
+        inspector_id: 'U_MOCK',
+        inspector_name: 'Demo Inspector',
+        photo_url: '',
+        ai_confidence: (0.85+Math.random()*0.14).toFixed(2),
+        ai_provider: 'groq',
+        notes: '',
+        synced_at: date.toISOString()
+      });
+      // Cache per-month
+      if (!S.readings[monthYear]) S.readings[monthYear] = [];
+      S.readings[monthYear].push(readings[readings.length-1]);
+    }
+    DB.set('all_readings_'+m.meter_id, readings);
+  });
+
+  DB.set('mock_loaded', true);
+  updateMeterSelector();
+  // Pre-select first meter
+  S.activeMeter = meters[0];
+  updateMeterSelector();
 }
 
 // ── Boot ──
