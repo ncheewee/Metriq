@@ -714,12 +714,12 @@ let pe = '', pr = null; // pin entry, pending role
 // ═══════════════════════════════════════════
 async function api(action, params = {}) {
   if (!S.backendUrl) throw new Error('No backend URL — configure in Admin → Settings');
+  // Apps Script does not support CORS on POST from external origins.
+  // We encode the full payload as a 'payload' query param on a GET request instead.
+  // doGet() in Code.gs handles this transparently.
   const body = { action, apiKey: S.apiKey, ...params };
-  const res = await fetch(S.backendUrl, {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' }
-  });
+  const url = S.backendUrl + '?payload=' + encodeURIComponent(JSON.stringify(body));
+  const res = await fetch(url);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'Backend error');
   return data.data;

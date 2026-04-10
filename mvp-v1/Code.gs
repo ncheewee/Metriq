@@ -48,9 +48,23 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  // Health check
-  const out = ContentService.createTextOutput(JSON.stringify({ ok: true, version: 'MetrIQ MVP v1' }));
+  const out = ContentService.createTextOutput();
   out.setMimeType(ContentService.MimeType.JSON);
+
+  // If a 'payload' param is present, treat it as an API call (CORS-safe workaround)
+  if (e && e.parameter && e.parameter.payload) {
+    try {
+      const body = JSON.parse(e.parameter.payload);
+      const result = route(body);
+      out.setContent(JSON.stringify({ ok: true, data: result }));
+    } catch (err) {
+      out.setContent(JSON.stringify({ ok: false, error: err.message }));
+    }
+    return out;
+  }
+
+  // Plain GET = health check
+  out.setContent(JSON.stringify({ ok: true, version: 'MetrIQ MVP v1' }));
   return out;
 }
 
