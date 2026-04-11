@@ -907,28 +907,48 @@ function updDots(st='') {
   }
 }
 async function chkPin() {
-  if (!S.backendUrl) {
-    // Offline mode: check local users cache
-    const localUsers = DB.get('users_cache') || [];
-    const hash = simpleHash(pe);
-    const user = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
-    if (user) { S.role = pr; S.user = user; await afterLogin(); return; }
-    pinFail();
+  const localUsers = DB.get('users_cache') || [];
+  const hash = simpleHash(pe);
+  const cachedUser = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
+
+  // ── Cache-first login ──────────────────────────────────────────────────────
+  // If we have a matching local hash, log in instantly. Verify against backend
+  // in the background — if it comes back invalid (PIN changed), force logout.
+  if (cachedUser) {
+    S.role = pr; S.user = cachedUser;
+    await afterLogin();
+    // Silent background re-verify (don't block UI)
+    if (S.backendUrl) {
+      api('verifyPin', { role: pr, pin: pe }).then(result => {
+        if (!result.valid) {
+          toast('PIN revoked — please log in again', 'err');
+          logout();
+        } else {
+          // Refresh user cache with latest data from backend
+          DB.set('users_cache', (DB.get('users_cache') || []).map(u =>
+            u.role === result.user.role && u.pin_hash === hash ? result.user : u
+          ));
+        }
+      }).catch(() => { /* network error — stay logged in on cached credentials */ });
+    }
     return;
   }
+
+  // ── No local cache: must hit backend ──────────────────────────────────────
+  if (!S.backendUrl) { pinFail(); return; }
   try {
     const result = await api('verifyPin', { role: pr, pin: pe });
     if (result.valid) {
       S.role = pr; S.user = result.user;
+      // Cache this user's hash so next login is instant
+      const existing = DB.get('users_cache') || [];
+      const updated = existing.filter(u => !(u.role === result.user.role && u.name === result.user.name));
+      updated.push({ ...result.user, pin_hash: hash });
+      DB.set('users_cache', updated);
       await afterLogin();
     } else { pinFail(); }
   } catch (e) {
-    // Fallback to local cache
-    const localUsers = DB.get('users_cache') || [];
-    const hash = simpleHash(pe);
-    const user = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
-    if (user) { S.role = pr; S.user = user; await afterLogin(); return; }
-    toast('Backend error: ' + e.message, 'err');
+    toast('Backend unreachable — try again', 'err');
     pinFail();
   }
 }
@@ -1053,7 +1073,11 @@ async function loadMeters() {
 }
 
 async function loadReadingsForMonth(monthYear) {
+  // Return in-memory cache instantly if already loaded this session
   if (S.readings[monthYear] && S.readings[monthYear].length) return S.readings[monthYear];
+  // Try localStorage cache as first-pass before hitting backend
+  const lsCache = DB.get('readings_cache_' + monthYear);
+  if (lsCache && lsCache.length) S.readings[monthYear] = lsCache;
   // Start with any locally cached (mock) readings for this month
   const localCache = DB.get('readings_' + monthYear) || [];
   const mockForMonth = [];
@@ -1281,8 +1305,21 @@ async function loadOverview() {
   }
   const monthYear = sel.value || curMonthYear();
 
-  // Load readings for the month
-  const readings = await loadReadingsForMonth(monthYear);
+  // ── Cache-first: render immediately from whatever we already have ────────
+  // Use cached readings if available, then silently refresh from backend.
+  const cachedReadings = S.readings[monthYear] || DB.get('readings_cache_' + monthYear) || [];
+  renderOverviewGrid(monthYear, cachedReadings);
+
+  // Refresh from backend in background; re-render only if data changed
+  loadReadingsForMonth(monthYear).then(fresh => {
+    const cachedStr = JSON.stringify(cachedReadings.map(r=>r.reading_id).sort());
+    const freshStr  = JSON.stringify((fresh||[]).map(r=>r.reading_id).sort());
+    if (freshStr !== cachedStr) renderOverviewGrid(monthYear, fresh || []);
+    DB.set('readings_cache_' + monthYear, fresh || []);
+  }).catch(() => {});
+}
+
+function renderOverviewGrid(monthYear, readings) {
 
   const total = S.meters.length;
   const readMap = {};

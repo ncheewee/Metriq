@@ -72,7 +72,10 @@ function doGet(e) {
 function route(body) {
   const { action, apiKey } = body;
 
-  // Verify API key for all write actions; reads are also key-protected
+  // Keepalive ping — no API key required (used by UptimeRobot to keep VM warm)
+  if (action === 'ping') return { pong: true, ts: new Date().toISOString() };
+
+  // Verify API key for all other actions
   if (!verifyKey(apiKey)) throw new Error('Unauthorized');
 
   switch (action) {
