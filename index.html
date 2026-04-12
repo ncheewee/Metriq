@@ -63,6 +63,12 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Barlow',
 .pb:active{background:var(--amg);border-color:var(--am);transform:scale(.95)}
 .pb.del{color:var(--tx2)}.pb.emp{background:none;border:none;cursor:default}
 .pbk{margin-top:14px;background:none;border:none;color:var(--tx3);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:1px;text-transform:uppercase}
+.psi{margin-top:16px;width:100%;padding:14px;border-radius:var(--rs);background:var(--am);border:none;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#000;cursor:pointer;letter-spacing:1px;transition:all .15s;display:none;align-items:center;justify-content:center;gap:8px}
+.psi.show{display:flex}
+.psi:active{transform:scale(.97);opacity:.9}
+.psi.loading{opacity:.7;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.psi .spin{display:inline-block;width:16px;height:16px;border:2px solid #0006;border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite}
 .lver{position:fixed;bottom:16px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:1px}
 /* backend status on login */
 .be-status{margin-top:14px;font-size:11px;font-family:'Share Tech Mono',monospace;padding:7px 14px;border-radius:20px;border:1px solid var(--bd);color:var(--tx3)}
@@ -356,6 +362,7 @@ input[type=range]{flex:1;accent-color:var(--am)}
       <button class="pb" onclick="pk('7')">7</button><button class="pb" onclick="pk('8')">8</button><button class="pb" onclick="pk('9')">9</button>
       <button class="pb emp"></button><button class="pb" onclick="pk('0')">0</button><button class="pb del" onclick="pdel()">⌫</button>
     </div>
+    <button class="psi" id="signInBtn" onclick="chkPin()">Sign In</button>
     <button class="pbk" onclick="backToRoles()">← Back</button>
   </div>
 
@@ -416,7 +423,10 @@ input[type=range]{flex:1;accent-color:var(--am)}
         <div style="margin-top:10px;font-size:12px;color:var(--tx3)" id="ovMonth"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <div class="clbl" style="flex:1">All Meters</div>
+        <div style="flex:1">
+          <div class="clbl">All Meters</div>
+          <div id="syncStatus" style="font-size:10px;color:var(--tx3);font-family:'Share Tech Mono',monospace;margin-top:1px">Syncing...</div>
+        </div>
         <select class="fi" id="ovMonthSel" style="width:auto;font-size:12px;padding:6px 10px" onchange="loadOverview()"></select>
       </div>
       <div class="meter-grid" id="meterGrid"></div>
@@ -892,11 +902,18 @@ function buildPinDots() {
 function pk(d) {
   if (pe.length >= PIN_LEN) return;
   pe += d; updDots();
-  if (pe.length === PIN_LEN) setTimeout(chkPin, 120);
+  const btn = document.getElementById('signInBtn');
+  if (pe.length === PIN_LEN) {
+    btn.classList.add('show');
+    btn.focus();
+  } else {
+    btn.classList.remove('show');
+  }
 }
 function pdel() {
   pe = pe.slice(0,-1); updDots();
   document.getElementById('pinErr').textContent = '';
+  document.getElementById('signInBtn').classList.remove('show');
 }
 function updDots(st='') {
   for (let i = 0; i < PIN_LEN; i++) {
@@ -907,6 +924,9 @@ function updDots(st='') {
   }
 }
 async function chkPin() {
+  const btn = document.getElementById('signInBtn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spin"></span> Signing in...';
   const localUsers = DB.get('users_cache') || [];
   const hash = simpleHash(pe);
   const cachedUser = localUsers.find(u => u.role === pr && u.pin_hash === hash && u.active !== 'N');
@@ -955,7 +975,15 @@ async function chkPin() {
 function pinFail() {
   updDots('err');
   document.getElementById('pinErr').textContent = 'Incorrect PIN';
-  setTimeout(() => { pe=''; updDots(); document.getElementById('pinErr').textContent=''; }, 1300);
+  const btn = document.getElementById('signInBtn');
+  btn.classList.remove('loading');
+  btn.innerHTML = 'Sign In';
+  setTimeout(() => {
+    pe=''; updDots();
+    document.getElementById('pinErr').textContent='';
+    btn.classList.remove('show');
+    btn.innerHTML = 'Sign In';
+  }, 1300);
 }
 // Simple local hash for offline fallback
 function simpleHash(s) {
@@ -1306,17 +1334,26 @@ async function loadOverview() {
   const monthYear = sel.value || curMonthYear();
 
   // ── Cache-first: render immediately from whatever we already have ────────
-  // Use cached readings if available, then silently refresh from backend.
   const cachedReadings = S.readings[monthYear] || DB.get('readings_cache_' + monthYear) || [];
+  const syncEl = document.getElementById('syncStatus');
+  const lastSync = DB.get('last_sync_' + monthYear);
+  if (syncEl) syncEl.textContent = lastSync ? 'Syncing...' : 'Fetching from backend...';
   renderOverviewGrid(monthYear, cachedReadings);
 
-  // Refresh from backend in background; re-render only if data changed
+  // Refresh from backend in background; update sync status when done
   loadReadingsForMonth(monthYear).then(fresh => {
     const cachedStr = JSON.stringify(cachedReadings.map(r=>r.reading_id).sort());
     const freshStr  = JSON.stringify((fresh||[]).map(r=>r.reading_id).sort());
     if (freshStr !== cachedStr) renderOverviewGrid(monthYear, fresh || []);
     DB.set('readings_cache_' + monthYear, fresh || []);
-  }).catch(() => {});
+    const now = new Date();
+    DB.set('last_sync_' + monthYear, now.toISOString());
+    if (syncEl) syncEl.textContent = 'Synced ' + now.toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'});
+  }).catch(() => {
+    if (syncEl) syncEl.textContent = lastSync
+      ? 'Last synced ' + new Date(lastSync).toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'})
+      : 'Offline — showing cached data';
+  });
 }
 
 function renderOverviewGrid(monthYear, readings) {
