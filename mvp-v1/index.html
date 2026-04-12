@@ -812,6 +812,13 @@ async function init() {
   DB.remove && DB.remove('mock_loaded');
 
   applyTheme(S.dark);
+  // Clear bad fs value left by old zoom approach (one-time migration)
+  const rawFs = DB.get('fs');
+  if (rawFs !== null && (isNaN(rawFs) || Number(rawFs) < 1 || Number(rawFs) > 4 || !Number.isInteger(Number(rawFs)))) {
+    DB.set('fs', 1); S.fs = 1;
+  } else {
+    S.fs = Math.min(4, Math.max(1, Math.round(Number(S.fs)) || 1));
+  }
   applyFont(S.fs, false);
 
   // Update login screen site name
@@ -2342,17 +2349,11 @@ function applyTheme(dark) {
 }
 function applyFont(v, save=true) {
   S.fs = v;
-  const scale = FSC[v-1];
-  document.documentElement.style.setProperty('--fs', scale);
-  // Use zoom for reliable cross-browser scaling of the whole app
-  const app = document.getElementById('app');
-  if (app) {
-    app.style.zoom = scale;
-    // Fallback for Firefox which doesn't support zoom
-    app.style.transform = 'scale(' + scale + ')';
-    app.style.transformOrigin = 'top center';
-  }
-  document.getElementById('fontLbl').textContent = FLB[v-1];
+  // Map slider 1-4 to base font sizes (px) on <html>
+  // All rem-based sizes in the app scale automatically
+  const sizes = ['14px', '15px', '16px', '18px'];
+  document.documentElement.style.fontSize = sizes[v - 1];
+  document.getElementById('fontLbl').textContent = FLB[v - 1];
   if (save) DB.set('fs', v);
 }
 function saveBackend() {
