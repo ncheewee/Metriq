@@ -15,10 +15,11 @@
  */
 
 // ─── SHEET NAMES ───────────────────────────────────────
-const SH_METERS   = 'Meters';
-const SH_READINGS = 'Readings';
-const SH_USERS    = 'Users';
-const SH_CONFIG   = 'Config';
+const SH_PROPERTIES = 'Properties';
+const SH_METERS     = 'Meters';
+const SH_READINGS   = 'Readings';
+const SH_USERS      = 'Users';
+const SH_CONFIG     = 'Config';
 
 // ─── SPREADSHEET HELPER ─────────────────────────────────
 // Always use this instead of SpreadsheetApp.getActiveSpreadsheet()
@@ -79,6 +80,12 @@ function route(body) {
   if (!verifyKey(apiKey)) throw new Error('Unauthorized');
 
   switch (action) {
+    // PROPERTIES
+    case 'getProperties': return getProperties();
+    case 'addProperty':   return addProperty(body);
+    case 'updateProperty':return updateProperty(body);
+    case 'deleteProperty':return deleteProperty(body);
+
     // METERS
     case 'getMeters':    return getMeters();
     case 'addMeter':     return addMeter(body);
@@ -109,6 +116,9 @@ function route(body) {
     // QUOTA TRACKING
     case 'incrementEmailQuota': return incrementEmailQuota();
     case 'resetEmailQuota':     return resetEmailQuota();
+
+    // MOCK DATA (Admin only, dev/demo use)
+    case 'setupMockData': return setupMockData();
 
     default: throw new Error('Unknown action: ' + action);
   }
@@ -164,7 +174,58 @@ function nowISO() {
 }
 
 // ─── METERS ────────────────────────────────────────────
-const METER_HEADERS = ['meter_id','label','location','floor','active','added_date','added_by'];
+const PROPERTY_HEADERS = ['property_id','name','address','active','added_date','added_by'];
+
+function getProperties() {
+  const sheet = getSheet(SH_PROPERTIES);
+  return sheetToObjects(sheet).filter(r => r.active !== 'N');
+}
+
+function addProperty(body) {
+  const { name, address, addedBy } = body;
+  if (!name) throw new Error('name is required');
+  const sheet = getSheet(SH_PROPERTIES);
+  const prop = {
+    property_id: 'P_' + Date.now(),
+    name,
+    address: address || '',
+    active: 'Y',
+    added_date: nowISO(),
+    added_by: addedBy || ''
+  };
+  appendRow(sheet, PROPERTY_HEADERS, prop);
+  return prop;
+}
+
+function updateProperty(body) {
+  const { property_id, name, address } = body;
+  const sheet = getSheet(SH_PROPERTIES);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const rowIdx = findRowIndex(sheet, headers.indexOf('property_id'), property_id);
+  if (rowIdx < 0) throw new Error('Property not found');
+  const updates = { name, address };
+  Object.entries(updates).forEach(([k, v]) => {
+    if (v !== undefined) {
+      const col = headers.indexOf(k) + 1;
+      if (col > 0) sheet.getRange(rowIdx, col).setValue(v);
+    }
+  });
+  return { ok: true };
+}
+
+function deleteProperty(body) {
+  const { property_id } = body;
+  const sheet = getSheet(SH_PROPERTIES);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const rowIdx = findRowIndex(sheet, headers.indexOf('property_id'), property_id);
+  if (rowIdx < 0) throw new Error('Property not found');
+  sheet.getRange(rowIdx, headers.indexOf('active') + 1).setValue('N');
+  return { ok: true };
+}
+
+// ─── METERS ──────────────────────────────────────────
+// property_id links each meter to its parent property
+const METER_HEADERS = ['meter_id','property_id','label','location','floor','active','added_date','added_by'];
 
 function getMeters() {
   const sheet = getSheet(SH_METERS);
@@ -173,11 +234,13 @@ function getMeters() {
 }
 
 function addMeter(body) {
-  const { label, location, floor, addedBy } = body;
+  const { property_id, label, location, floor, addedBy } = body;
   if (!label) throw new Error('label is required');
+  if (!property_id) throw new Error('property_id is required');
   const sheet = getSheet(SH_METERS);
   const meter = {
     meter_id: 'M_' + Date.now(),
+    property_id: property_id,
     label: label,
     location: location || '',
     floor: floor || '',
@@ -190,12 +253,12 @@ function addMeter(body) {
 }
 
 function updateMeter(body) {
-  const { meter_id, label, location, floor } = body;
+  const { meter_id, property_id, label, location, floor } = body;
   const sheet = getSheet(SH_METERS);
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const rowIdx = findRowIndex(sheet, headers.indexOf('meter_id'), meter_id);
   if (rowIdx < 0) throw new Error('Meter not found');
-  const updates = { label, location, floor };
+  const updates = { property_id, label, location, floor };
   Object.entries(updates).forEach(([k, v]) => {
     if (v !== undefined) {
       const col = headers.indexOf(k) + 1;
@@ -212,9 +275,10 @@ function deleteMeter(body) {
   const rowIdx = findRowIndex(sheet, headers.indexOf('meter_id'), meter_id);
   if (rowIdx < 0) throw new Error('Meter not found');
   const col = headers.indexOf('active') + 1;
-  sheet.getRange(rowIdx, col).setValue('N'); // soft delete
+  sheet.getRange(rowIdx, col).setValue('N');
   return { ok: true };
 }
+
 
 // ─── READINGS ──────────────────────────────────────────
 const READING_HEADERS = [
@@ -568,10 +632,11 @@ function setupSheets() {
     return s;
   }
 
-  ensureSheet(SH_METERS,   METER_HEADERS);
-  ensureSheet(SH_READINGS, READING_HEADERS);
-  ensureSheet(SH_USERS,    USER_HEADERS);
-  ensureSheet(SH_CONFIG,   ['key', 'value']);
+  ensureSheet(SH_PROPERTIES, PROPERTY_HEADERS);
+  ensureSheet(SH_METERS,     METER_HEADERS);
+  ensureSheet(SH_READINGS,   READING_HEADERS);
+  ensureSheet(SH_USERS,      USER_HEADERS);
+  ensureSheet(SH_CONFIG,     ['key', 'value']);
 
   // Remove the default blank 'Sheet1' if it exists
   const defaultSheet = ss.getSheetByName('Sheet1');
@@ -656,4 +721,92 @@ function addFirstAdmin() {
     'PIN: ' + PIN + '\n\n' +
     'You can now log into the app as Admin.'
   );
+}
+
+// ─── SETUP MOCK DATA ──────────────────────────────────
+// Run from Admin panel in the app to seed demo data into Google Sheets.
+// Safe to run multiple times — skips if mock data already exists.
+function setupMockData() {
+  const propSheet  = getSheet(SH_PROPERTIES);
+  const meterSheet = getSheet(SH_METERS);
+  const readSheet  = getSheet(SH_READINGS);
+
+  // Skip if mock properties already exist
+  const existingProps = sheetToObjects(propSheet);
+  if (existingProps.some(p => p.property_id && p.property_id.startsWith('P_MOCK'))) {
+    return { ok: true, skipped: true, message: 'Mock data already exists' };
+  }
+
+  // 2 mock properties
+  const properties = [
+    { property_id: 'P_MOCK_01', name: 'Block A', address: '1 Demo Street, #01-01', active: 'Y', added_date: nowISO(), added_by: 'Setup' },
+    { property_id: 'P_MOCK_02', name: 'Block B', address: '2 Demo Street, #01-01', active: 'Y', added_date: nowISO(), added_by: 'Setup' },
+  ];
+  properties.forEach(p => appendRow(propSheet, PROPERTY_HEADERS, p));
+
+  // 5 meters per property = 10 total
+  const meterDefs = [
+    { property_id: 'P_MOCK_01', label: '#01-01 Blk A', location: 'Level 1', floor: 'L1' },
+    { property_id: 'P_MOCK_01', label: '#01-02 Blk A', location: 'Level 1', floor: 'L1' },
+    { property_id: 'P_MOCK_01', label: '#02-01 Blk A', location: 'Level 2', floor: 'L2' },
+    { property_id: 'P_MOCK_01', label: '#02-02 Blk A', location: 'Level 2', floor: 'L2' },
+    { property_id: 'P_MOCK_01', label: 'Common Area',  location: 'Lobby',   floor: 'G' },
+    { property_id: 'P_MOCK_02', label: '#01-01 Blk B', location: 'Level 1', floor: 'L1' },
+    { property_id: 'P_MOCK_02', label: '#01-02 Blk B', location: 'Level 1', floor: 'L1' },
+    { property_id: 'P_MOCK_02', label: '#02-01 Blk B', location: 'Level 2', floor: 'L2' },
+    { property_id: 'P_MOCK_02', label: '#02-02 Blk B', location: 'Level 2', floor: 'L2' },
+    { property_id: 'P_MOCK_02', label: 'Rooftop Tank', location: 'Rooftop', floor: 'R' },
+  ];
+
+  const meters = meterDefs.map((d, i) => ({
+    meter_id:    'M_MOCK_' + String(i+1).padStart(2,'0'),
+    property_id: d.property_id,
+    label:       d.label,
+    location:    d.location,
+    floor:       d.floor,
+    active:      'Y',
+    added_date:  nowISO(),
+    added_by:    'Setup'
+  }));
+  meters.forEach(m => appendRow(meterSheet, METER_HEADERS, m));
+
+  // 24 months of readings per meter (Jan 2024 – Dec 2025)
+  const existingReadings = sheetToObjects(readSheet);
+  let readingsAdded = 0;
+  meters.forEach(m => {
+    let val = 800 + Math.random() * 400;
+    const monthlyRate = 7 + Math.random() * 6;
+    for (let mo = 0; mo < 24; mo++) {
+      const date = new Date(2024, mo, 10 + Math.floor(Math.random() * 5));
+      const monthYear = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0');
+      const variation = (Math.random() - 0.5) * 0.4;
+      val += Math.max(0, monthlyRate * (1 + variation));
+      // Skip if already exists (idempotency)
+      if (existingReadings.some(r => r.meter_id === m.meter_id && r.month_year === monthYear)) continue;
+      const reading = {
+        reading_id:     'R_MOCK_' + m.meter_id + '_' + mo,
+        meter_id:       m.meter_id,
+        month_year:     monthYear,
+        reading_value:  val.toFixed(2),
+        reading_date:   Utilities.formatDate(date, 'Asia/Singapore', 'yyyy-MM-dd'),
+        reading_time:   '10:00',
+        inspector_id:   'U_MOCK',
+        inspector_name: 'Demo Inspector',
+        photo_url:      '',
+        ai_confidence:  (0.85 + Math.random() * 0.14).toFixed(2),
+        ai_provider:    'mock',
+        notes:          '',
+        synced_at:      nowISO()
+      };
+      appendRow(readSheet, READING_HEADERS, reading);
+      readingsAdded++;
+    }
+  });
+
+  return {
+    ok: true,
+    properties: properties.length,
+    meters: meters.length,
+    readings: readingsAdded
+  };
 }

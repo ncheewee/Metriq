@@ -550,18 +550,32 @@ input[type=range]{flex:1;accent-color:var(--am)}
         </div>
       </div>
 
-      <!-- Users — Admin only -->
+      <!-- Properties — Admin only -->
       <div class="card admin-only">
-        <div class="stitle">Users</div>
-        <div id="userList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
-        <button class="btn btg wf" onclick="openAddUser()">+ Add User</button>
+        <div class="stitle">Properties</div>
+        <div id="propertyList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
+        <button class="btn btp wf" onclick="openAddProperty()">+ Add Property</button>
       </div>
 
       <!-- Meters — Admin only -->
       <div class="card admin-only">
         <div class="stitle">Meters</div>
         <div id="meterList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
-        <button class="btn btg wf" onclick="openAddMeter()">+ Add Meter</button>
+        <button class="btn btp wf" onclick="openAddMeter()">+ Add Meter</button>
+      </div>
+
+      <!-- Users — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Users</div>
+        <div id="userList" style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px"></div>
+        <button class="btn btp wf" onclick="openAddUser()">+ Add User</button>
+      </div>
+
+      <!-- Demo data — Admin only -->
+      <div class="card admin-only">
+        <div class="stitle">Demo / Mock Data</div>
+        <div class="ssub" style="margin-bottom:11px;color:var(--tx2)">Seeds 2 properties, 10 meters, and 24 months of readings into Google Sheets. Safe to run once — skips if already seeded.</div>
+        <button class="btn btg wf" id="mockDataBtn" onclick="runSetupMockData()">Setup Mock Data in Backend</button>
       </div>
 
       <!-- Reports — Manager + Admin -->
@@ -601,12 +615,25 @@ input[type=range]{flex:1;accent-color:var(--am)}
   </div>
 </div>
 
+<div class="ov" id="mAddProperty">
+  <div class="modal"><div class="mh"></div><div class="mt">Add Property</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><div class="fl">Property Name</div><input class="fi ft" id="npName" placeholder="e.g. Block A" maxlength="40"></div>
+      <div class="fg"><div class="fl">Address (optional)</div><input class="fi" id="npAddr" placeholder="e.g. 1 Example Road" maxlength="80"></div>
+      <div class="brow"><button class="btn btg" onclick="closeM('mAddProperty')">Cancel</button><button class="btn btp" onclick="addProperty()">Add Property</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="mAddMeter">
   <div class="modal"><div class="mh"></div><div class="mt">Add Meter</div>
     <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><div class="fl">Property</div>
+        <select class="fi" id="nmProperty"><option value="">— select property —</option></select>
+      </div>
       <div class="fg"><div class="fl">Meter Label</div><input class="fi ft" id="nmLabel" placeholder="e.g. #01-23 or Meter A1" maxlength="30"></div>
       <div class="fg"><div class="fl">Location</div><input class="fi" id="nmLoc" placeholder="e.g. Ground Floor" maxlength="40"></div>
-      <div class="fg"><div class="fl">Floor / Block</div><input class="fi" id="nmFloor" placeholder="e.g. B1" maxlength="20"></div>
+      <div class="fg"><div class="fl">Floor / Level</div><input class="fi" id="nmFloor" placeholder="e.g. L1" maxlength="20"></div>
       <div class="brow"><button class="btn btg" onclick="closeM('mAddMeter')">Cancel</button><button class="btn btp" onclick="addMeter()">Add Meter</button></div>
     </div>
   </div>
@@ -634,9 +661,8 @@ input[type=range]{flex:1;accent-color:var(--am)}
       <div class="fg"><div class="fl">Name</div><input class="fi" id="nuName" placeholder="Full name" maxlength="40"></div>
       <div class="fg"><div class="fl">Role</div>
         <select class="fi" id="nuRole">
-          <option value="Inspector">Inspector</option>
-          <option value="Manager">Manager</option>
-          <option value="Admin">Admin</option>
+          <option value="Inspector">Inspector — capture readings</option>
+          <option value="Manager">Manager — view & reports</option>
         </select>
       </div>
       <div class="fg"><div class="fl">6-Digit PIN</div><input class="fi ft" type="password" id="nuPin" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
@@ -725,6 +751,7 @@ let S = {
   ejsService: '', ejsTemplate: '', ejsKey: '',
 
   // data cache (from backend)
+  properties: [],  // [ { property_id, name, address }, ... ]
   meters: [],
   readings: {},     // { month_year: [reading, ...] }
   users: [],
@@ -780,7 +807,9 @@ async function init() {
   S.syncQueue = DB.get('syncQueue') || [];
 
   // Inject mock data for demo (checks flag internally)
-  genMockData();
+  // Mock data now lives in Google Sheets — seeded via Admin → Setup Mock Data
+  // genMockData() removed; localStorage mock data cleared on upgrade
+  DB.remove && DB.remove('mock_loaded');
 
   applyTheme(S.dark);
   applyFont(S.fs, false);
@@ -1071,32 +1100,30 @@ function go(screen) {
   if (screen === 'overview') loadOverview();
   if (screen === 'analytics') renderAnalytics();
   if (screen === 'history') renderHistory();
-  if (screen === 'settings') { renderUserList(); renderMeterSettingsList(); loadQuota(); }
+  if (screen === 'settings') { renderPropertyList(); renderUserList(); renderMeterSettingsList(); loadQuota(); }
 }
 
 // ═══════════════════════════════════════════
 //  DATA LOADING
 // ═══════════════════════════════════════════
 async function loadMeters() {
-  // Show cached immediately (includes mock data)
-  const cached = DB.get('meters_cache');
-  if (cached && cached.length) {
-    S.meters = cached;
-    updateMeterSelector();
-  }
-  // Refresh from backend in background — but MERGE with mock data, don't replace
+  // Show cached immediately
+  const cachedMeters = DB.get('meters_cache');
+  const cachedProps  = DB.get('props_cache');
+  if (cachedMeters && cachedMeters.length) { S.meters = cachedMeters; updateMeterSelector(); }
+  if (cachedProps  && cachedProps.length)  { S.properties = cachedProps; }
+
+  // Fetch properties + meters in parallel from backend
   try {
-    const meters = await api('getMeters');
-    if (meters && meters.length) {
-      // Keep mock meters + real meters, deduplicate by meter_id
-      const mockMeters = (DB.get('meters_cache') || []).filter(m => m.meter_id.startsWith('MOCK_'));
-      const merged = [...mockMeters, ...meters.filter(m => !m.meter_id.startsWith('MOCK_'))];
-      S.meters = merged;
-      DB.set('meters_cache', S.meters);
-      updateMeterSelector();
-    }
+    const [props, meters] = await Promise.all([
+      api('getProperties'),
+      api('getMeters')
+    ]);
+    if (props)  { S.properties = props;  DB.set('props_cache', props); }
+    if (meters) { S.meters = meters;     DB.set('meters_cache', meters); updateMeterSelector(); }
   } catch {
-    if (!S.meters.length) S.meters = DB.get('meters_cache') || [];
+    if (!S.meters.length)     S.meters     = DB.get('meters_cache') || [];
+    if (!S.properties.length) S.properties = DB.get('props_cache')  || [];
   }
 }
 
@@ -1106,23 +1133,12 @@ async function loadReadingsForMonth(monthYear) {
   // Try localStorage cache as first-pass before hitting backend
   const lsCache = DB.get('readings_cache_' + monthYear);
   if (lsCache && lsCache.length) S.readings[monthYear] = lsCache;
-  // Start with any locally cached (mock) readings for this month
-  const localCache = DB.get('readings_' + monthYear) || [];
-  const mockForMonth = [];
-  // Collect mock readings from per-meter cache
-  S.meters.filter(m => m.meter_id.startsWith('MOCK_')).forEach(m => {
-    const mr = DB.get('all_readings_' + m.meter_id) || [];
-    mr.filter(r => r.month_year === monthYear).forEach(r => mockForMonth.push(r));
-  });
   try {
     const data = await api('getReadings', { month_year: monthYear });
-    // Merge: real readings + mock readings
-    const real = data || [];
-    const merged = [...mockForMonth, ...real.filter(r => !r.reading_id.startsWith('MOCK_'))];
-    S.readings[monthYear] = merged;
-    return merged;
+    S.readings[monthYear] = data || [];
+    return S.readings[monthYear];
   } catch {
-    S.readings[monthYear] = mockForMonth.length ? mockForMonth : localCache;
+    S.readings[monthYear] = DB.get('readings_cache_' + monthYear) || [];
     return S.readings[monthYear];
   }
 }
@@ -1369,27 +1385,54 @@ function renderOverviewGrid(monthYear, readings) {
   document.getElementById('ovBar').style.width = pct + '%';
   document.getElementById('ovMonth').textContent = formatMonthYear(monthYear);
 
-  // Meter grid
+  // Meter grid — grouped by property
   const grid = document.getElementById('meterGrid');
   if (!S.meters.length) {
-    grid.innerHTML = '<div class="empty"><div class="empty-ico">💧</div>No meters configured yet</div>';
+    grid.innerHTML = '<div class="empty"><div class="empty-ico">💧</div>No meters yet. Admin → Setup Mock Data or add meters in Settings.</div>';
     return;
   }
-  grid.innerHTML = S.meters.map(m => {
+
+  // Build property groups; ungrouped meters go under a fallback group
+  const propMap = {};
+  S.properties.forEach(p => { propMap[p.property_id] = { prop: p, meters: [] }; });
+  const ungrouped = [];
+  S.meters.forEach(m => {
+    if (m.property_id && propMap[m.property_id]) propMap[m.property_id].meters.push(m);
+    else ungrouped.push(m);
+  });
+
+  const renderMeterRow = m => {
     const r = readMap[m.meter_id];
-    const done = !!r;
+    const isDone = !!r;
     return `<div class="mg-item" onclick="startCaptureFromOverview('${m.meter_id}')">
-      <div class="mg-dot ${done?'done':'pend'}"></div>
+      <div class="mg-dot ${isDone?'done':'pend'}"></div>
       <div style="flex:1;min-width:0">
         <div class="mg-label" style="font-weight:600">${m.label}</div>
         <div style="font-size:11px;color:var(--tx3)">${[m.location,m.floor].filter(Boolean).join(' · ')||'No location'}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div class="mg-val">${done ? fNum(r.reading_value,2)+' m³' : '<span style="color:var(--am);font-size:11px;font-family:\u0027Rajdhani\u0027,sans-serif;font-weight:700">📷 Read</span>'}</div>
-        ${done ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${fDate(r.reading_date)}</div>` : ''}
+        <div class="mg-val">${isDone ? fNum(r.reading_value,2)+' m³' : '<span style="color:var(--am);font-size:11px;font-family:\'Rajdhani\',sans-serif;font-weight:700">📷 Read</span>'}</div>
+        ${isDone ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${fDate(r.reading_date)}</div>` : ''}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = '';
+  const groups = Object.values(propMap).filter(g => g.meters.length);
+  groups.forEach(g => {
+    const propDone = g.meters.filter(m => readMap[m.meter_id]).length;
+    html += `<div style="margin-top:12px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--am);padding:4px 0 6px">${g.prop.name} &middot; ${propDone}/${g.meters.length}</div>
+      ${g.meters.map(renderMeterRow).join('')}
+    </div>`;
+  });
+  if (ungrouped.length) {
+    html += `<div style="margin-top:12px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);padding:4px 0 6px">Other</div>
+      ${ungrouped.map(renderMeterRow).join('')}
+    </div>`;
+  }
+  grid.innerHTML = html;
 
   // Check if all done → suggest Telegram
   if (pct === 100 && S.alertCfg.onCompletion) {
@@ -2301,9 +2344,14 @@ function applyFont(v, save=true) {
   S.fs = v;
   const scale = FSC[v-1];
   document.documentElement.style.setProperty('--fs', scale);
-  // Actually scale the app — zoom the root element
+  // Use zoom for reliable cross-browser scaling of the whole app
   const app = document.getElementById('app');
-  if (app) app.style.fontSize = (scale * 100) + '%';
+  if (app) {
+    app.style.zoom = scale;
+    // Fallback for Firefox which doesn't support zoom
+    app.style.transform = 'scale(' + scale + ')';
+    app.style.transformOrigin = 'top center';
+  }
   document.getElementById('fontLbl').textContent = FLB[v-1];
   if (save) DB.set('fs', v);
 }
@@ -2390,21 +2438,95 @@ function renderMeterSettingsList() {
     </div>`
   ).join('');
 }
-function openAddMeter() { openM('mAddMeter'); }
+// ── Admin: Properties ──────────────────────────────────────
+
+function renderPropertyList() {
+  const el = document.getElementById('propertyList');
+  if (!el) return;
+  if (!S.properties.length) { el.innerHTML = '<div style="color:var(--tx3);font-size:12px">No properties yet. Add one above.</div>'; return; }
+  el.innerHTML = S.properties.map(p => `
+    <div class="si" style="cursor:default">
+      <div>
+        <div class="slbl">${p.name}</div>
+        <div class="ssub">${p.address || 'No address'} &middot; ${S.meters.filter(m=>m.property_id===p.property_id).length} meter(s)</div>
+      </div>
+    </div>`).join('');
+}
+
+function openAddProperty() {
+  document.getElementById('npName').value = '';
+  document.getElementById('npAddr').value = '';
+  openM('mAddProperty');
+}
+
+async function addProperty() {
+  const name = document.getElementById('npName').value.trim();
+  const address = document.getElementById('npAddr').value.trim();
+  if (!name) { toast('Enter property name', 'err'); return; }
+  try {
+    const p = await api('addProperty', { name, address, addedBy: S.user?.name||'Admin' });
+    S.properties.push(p);
+    DB.set('props_cache', S.properties);
+    closeM('mAddProperty');
+    renderPropertyList();
+    populatePropertyDropdown();
+    toast('✓ Property added', 'ok');
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function populatePropertyDropdown() {
+  const sel = document.getElementById('nmProperty');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— select property —</option>' +
+    S.properties.map(p => `<option value="${p.property_id}">${p.name}</option>`).join('');
+}
+
+// ── Admin: Meters ────────────────────────────────────────
+
+function openAddMeter() {
+  populatePropertyDropdown();
+  document.getElementById('nmLabel').value = '';
+  document.getElementById('nmLoc').value = '';
+  document.getElementById('nmFloor').value = '';
+  openM('mAddMeter');
+}
+
 async function addMeter() {
+  const property_id = document.getElementById('nmProperty').value;
   const label = document.getElementById('nmLabel').value.trim();
   const loc = document.getElementById('nmLoc').value.trim();
   const floor = document.getElementById('nmFloor').value.trim();
+  if (!property_id) { toast('Select a property', 'err'); return; }
   if (!label) { toast('Enter meter label', 'err'); return; }
   if (S.meters.length >= 100) { toast('Maximum 100 meters reached', 'err'); return; }
   try {
-    const m = await api('addMeter', { label, location: loc, floor, addedBy: S.user?.name||'Admin' });
+    const m = await api('addMeter', { property_id, label, location: loc, floor, addedBy: S.user?.name||'Admin' });
     S.meters.push(m);
     DB.set('meters_cache', S.meters);
     closeM('mAddMeter');
     renderMeterSettingsList();
+    renderPropertyList();
     toast('✓ Meter added', 'ok');
   } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function runSetupMockData() {
+  const btn = document.getElementById('mockDataBtn');
+  btn.textContent = 'Seeding data...';
+  btn.disabled = true;
+  try {
+    const r = await api('setupMockData');
+    if (r.skipped) {
+      toast('Mock data already exists in backend', 'ok');
+    } else {
+      toast(`✓ Seeded: ${r.properties} properties, ${r.meters} meters, ${r.readings} readings`, 'ok');
+      // Reload everything
+      await loadMeters();
+      renderPropertyList();
+      renderMeterSettingsList();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+  finally { btn.textContent = 'Setup Mock Data in Backend'; btn.disabled = false; }
 }
 function openEditMeter(id) {
   const m = S.meters.find(x => x.meter_id === id);
