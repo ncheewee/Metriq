@@ -306,6 +306,14 @@ input[type=range]{flex:1;accent-color:var(--am)}
 .cinput{background:var(--sf2);border:2px solid var(--am);border-radius:var(--rs);padding:13px;color:var(--tx);font-family:'Share Tech Mono',monospace;font-size:22px;outline:none;width:100%;text-align:center;transition:box-shadow .2s}
 .cinput:focus{box-shadow:0 0 0 3px var(--amg)}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* ── Font scale levels (fs-1=default, fs-2=+15%, fs-3=+30%, fs-4=+50%) ── */
+/* Targets the main content text only — layout/padding unchanged */
+.fs-2 .mg-label,.fs-2 .slbl,.fs-2 .sv,.fs-2 .fi,.fs-2 .btn{font-size:15px!important}
+.fs-2 .nb{font-size:11px!important}.fs-2 .stitle{font-size:15px!important}.fs-2 .dnum{font-size:60px!important}
+.fs-3 .mg-label,.fs-3 .slbl,.fs-3 .sv,.fs-3 .fi,.fs-3 .btn{font-size:17px!important}
+.fs-3 .nb{font-size:13px!important}.fs-3 .stitle{font-size:17px!important}.fs-3 .dnum{font-size:68px!important}
+.fs-4 .mg-label,.fs-4 .slbl,.fs-4 .sv,.fs-4 .fi,.fs-4 .btn{font-size:20px!important}
+.fs-4 .nb{font-size:14px!important}.fs-4 .stitle{font-size:20px!important}.fs-4 .dnum{font-size:78px!important}
 </style>
 </head>
 <body>
@@ -806,10 +814,16 @@ async function init() {
   // Load offline queue
   S.syncQueue = DB.get('syncQueue') || [];
 
-  // Inject mock data for demo (checks flag internally)
-  // Mock data now lives in Google Sheets — seeded via Admin → Setup Mock Data
-  // genMockData() removed; localStorage mock data cleared on upgrade
-  DB.remove && DB.remove('mock_loaded');
+  // One-time migration: purge old mock/stale localStorage keys (v2 schema)
+  if (DB.get('schema_v') !== '2') {
+    const purgePrefixes = ['MOCK_','mock_','meters_cache','props_cache','readings_cache_',
+                           'readings_','all_readings_','last_sync_'];
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && purgePrefixes.some(p => k.startsWith(p) || k === p)) localStorage.removeItem(k);
+    }
+    DB.set('schema_v', '2');
+  }
 
   applyTheme(S.dark);
   // Clear bad fs value left by old zoom approach (one-time migration)
@@ -2349,10 +2363,9 @@ function applyTheme(dark) {
 }
 function applyFont(v, save=true) {
   S.fs = v;
-  // Map slider 1-4 to base font sizes (px) on <html>
-  // All rem-based sizes in the app scale automatically
-  const sizes = ['14px', '15px', '16px', '18px'];
-  document.documentElement.style.fontSize = sizes[v - 1];
+  // Swap a font-scale class on <html> — CSS overrides key px sizes per level
+  document.documentElement.className = document.documentElement.className
+    .replace(/\bfs-\d\b/g, '').trim() + ' fs-' + v;
   document.getElementById('fontLbl').textContent = FLB[v - 1];
   if (save) DB.set('fs', v);
 }
